@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Transaction, type UserAction } from '../store/db';
+import { db, type Transaction, type UserAction, type Reward } from '../store/db';
 import { startOfDay, differenceInDays, format } from 'date-fns';
 import { useEffect, useState } from 'react';
 
@@ -21,6 +21,18 @@ export function useEconomy() {
 
     const transactions = useLiveQuery(() => db.transactions.orderBy('timestamp').reverse().limit(50).toArray(), [], []);
     const customActions = useLiveQuery(() => db.userActions.toArray(), [], []);
+    const storedRewards = useLiveQuery(() => db.rewards.toArray(), [], []);
+
+    // Streaks & Goals
+    const streakCount = useLiveQuery(async () => {
+        const streakRecord = await db.appState.get('currentStreak');
+        return streakRecord ? parseInt(streakRecord.value, 10) : 0;
+    }, [], 0);
+
+    const savingsGoal = useLiveQuery(async () => {
+        const goalRecord = await db.appState.get('savingsGoal');
+        return goalRecord ? parseFloat(goalRecord.value) : 0;
+    }, [], 0);
 
     let hasRunJobs = false;
 
@@ -33,6 +45,19 @@ export function useEconomy() {
             try {
                 const todayStr = format(new Date(), 'yyyy-MM-dd');
                 const stateRecord = await db.appState.get('lastProcessDate');
+                const lastPositiveActStr = await db.appState.get('lastPositiveActionDate');
+
+                // Streak expiration logic
+                if (lastPositiveActStr) {
+                    const lastPosDate = new Date(lastPositiveActStr.value);
+                    const todayDate = startOfDay(new Date());
+                    const daysSincePos = differenceInDays(todayDate, startOfDay(lastPosDate));
+
+                    if (daysSincePos > 1) {
+                        // User missed a full calendar day of positive actions
+                        await db.appState.put({ key: 'currentStreak', value: '0' });
+                    }
+                }
 
                 // Edge Case Fix: If first launch, set today and give 0 balance, NO retroactive taxes
                 if (!stateRecord) {
@@ -121,10 +146,39 @@ export function useEconomy() {
     };
 
     const logAction = async (action: UserAction) => {
+        let finalValue = action.value;
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+        let multiplier = 1;
+
+        if (action.value > 0) {
+            // Apply Streak Bonus logic
+            let currentStreakStr = await db.appState.get('currentStreak');
+            let streak = currentStreakStr ? parseInt(currentStreakStr.value, 10) : 0;
+            const lastPosStr = await db.appState.get('lastPositiveActionDate');
+
+            if (lastPosStr && lastPosStr.value !== todayStr) {
+                // Determine if it was exactly yesterday. If missing a day, it resets (handled in background jobs).
+                streak += 1;
+            } else if (!lastPosStr) {
+                streak = 1;
+            }
+
+            await db.appState.put({ key: 'lastPositiveActionDate', value: todayStr });
+            await db.appState.put({ key: 'currentStreak', value: streak.toString() });
+
+            if (streak >= 3) {
+                multiplier = 1.2;
+                finalValue = Math.round(finalValue * multiplier * 100) / 100;
+            }
+        }
+
+        const txName = multiplier > 1 ? `${action.name} (Bonus x1.2)` : action.name;
+
         await db.transactions.add({
             actionId: action.id,
-            actionName: action.name,
-            value: action.value,
+            actionName: txName,
+            value: finalValue,
             timestamp: Date.now(),
             type: 'user'
         });
@@ -156,15 +210,51 @@ export function useEconomy() {
         });
     };
 
+    const setSavingsGoal = async (val: number) => {
+        await db.appState.put({ key: 'savingsGoal', value: val.toString() });
+    };
+
+    const addReward = async (reward: Omit<Reward, "id">) => {
+        await db.rewards.add({
+            id: crypto.randomUUID(),
+            ...reward
+        });
+    };
+
+    const deleteReward = async (id: string) => {
+        await db.rewards.delete(id);
+    };
+
+    const purchaseReward = async (reward: Reward) => {
+        if (balance < reward.cost) return false;
+
+        await db.transactions.add({
+            actionId: reward.id,
+            actionName: `Reward: ${reward.name}`,
+            value: -reward.cost, // Deducting cost
+            timestamp: Date.now(),
+            type: 'user' // Treat as user spending
+        });
+
+        return true;
+    };
+
     return {
         balance,
         transactions,
         customActions,
         isProcessing,
+        streakCount,
+        savingsGoal,
+        storedRewards,
+        setSavingsGoal,
         logAction,
         addCustomAction,
         deleteCustomAction,
         declareBankruptcy,
-        simulateDayPass
+        simulateDayPass,
+        addReward,
+        deleteReward,
+        purchaseReward
     };
 }

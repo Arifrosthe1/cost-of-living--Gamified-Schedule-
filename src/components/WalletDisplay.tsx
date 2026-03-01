@@ -10,7 +10,7 @@ export function WalletDisplay({ balance }: { balance: number }) {
 
     return (
         <div className="flex flex-col items-center justify-center py-12 px-6">
-            <h2 className="text-sm font-medium tracking-widest text-neutral-400 uppercase mb-2">Current Balance</h2>
+            <h2 className="text-sm font-medium tracking-widest text-neutral-400 uppercase mb-1">Current Balance</h2>
             <div
                 className={cn(
                     "text-6xl font-light tracking-tighter transition-colors duration-500",

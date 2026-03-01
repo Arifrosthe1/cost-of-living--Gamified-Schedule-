@@ -20,17 +20,26 @@ export interface AppState {
     value: any;
 }
 
+export interface Reward {
+    id: string;
+    name: string;
+    cost: number;
+    tier: 'common' | 'rare' | 'epic';
+}
+
 export class EconomyDB extends Dexie {
     userActions!: Table<UserAction>;
     transactions!: Table<Transaction>;
     appState!: Table<AppState>;
+    rewards!: Table<Reward>;
 
     constructor() {
         super('EconomyDB');
-        this.version(1).stores({
+        this.version(2).stores({
             userActions: 'id',
             transactions: '++id, timestamp, type',
-            appState: 'key'
+            appState: 'key',
+            rewards: 'id, tier'
         });
     }
 }
