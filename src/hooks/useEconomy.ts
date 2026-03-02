@@ -191,6 +191,10 @@ export function useEconomy() {
         });
     };
 
+    const updateCustomAction = async (id: string, action: Partial<Omit<UserAction, "id">>) => {
+        await db.userActions.update(id, action);
+    };
+
     const deleteCustomAction = async (id: string) => {
         await db.userActions.delete(id);
     };
@@ -250,6 +254,7 @@ export function useEconomy() {
         setSavingsGoal,
         logAction,
         addCustomAction,
+        updateCustomAction,
         deleteCustomAction,
         declareBankruptcy,
         simulateDayPass,

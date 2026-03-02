@@ -1,11 +1,183 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Edit2 } from 'lucide-react';
 import { useEconomy } from '../hooks/useEconomy';
 import { cn } from '../utils';
+import { useState, useRef, useEffect } from 'react';
+import { EditActionForm } from './EditActionForm';
+import type { UserAction } from '../store/db';
+
+function ActionItem({
+    action,
+    isEarn,
+    onLog,
+    onEdit,
+    onDelete,
+    isRevealed,
+    onReveal
+}: {
+    action: UserAction,
+    isEarn: boolean,
+    onLog: (a: UserAction) => void,
+    onEdit: () => void,
+    onDelete: () => void,
+    isRevealed: boolean,
+    onReveal: (id: string | null) => void
+}) {
+    const startX = useRef<number | null>(null);
+    const currentX = useRef<number>(0);
+    const [offsetX, setOffsetX] = useState(0);
+    const ACTION_WIDTH = 140; // width of Edit + Delete buttons (70px each)
+
+    useEffect(() => {
+        if (!isRevealed) {
+            setOffsetX(0);
+        } else {
+            setOffsetX(-ACTION_WIDTH);
+        }
+    }, [isRevealed]);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        startX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (startX.current === null) return;
+        const diff = e.touches[0].clientX - startX.current;
+
+        if (diff < 0) {
+            currentX.current = Math.max(diff, -ACTION_WIDTH - 20); // slight overscroll
+            setOffsetX(isRevealed ? -ACTION_WIDTH + currentX.current : currentX.current);
+        } else if (isRevealed && diff > 0) {
+            currentX.current = Math.min(diff, ACTION_WIDTH + 20);
+            setOffsetX(Math.min(0, -ACTION_WIDTH + currentX.current));
+        }
+    };
+
+    const handleTouchEnd = () => {
+        if (startX.current === null) return;
+        startX.current = null;
+
+        if (offsetX < -ACTION_WIDTH / 2) {
+            onReveal(action.id);
+            setOffsetX(-ACTION_WIDTH);
+        } else {
+            onReveal(null);
+            setOffsetX(0);
+        }
+        currentX.current = 0;
+    };
+
+    return (
+        <div className="relative w-full overflow-hidden rounded-2xl mb-3">
+            {/* Background Actions */}
+            <div className="absolute inset-y-0 right-0 flex items-center justify-end rounded-2xl overflow-hidden">
+                <button
+                    onClick={(e) => { e.stopPropagation(); onReveal(null); onEdit(); }}
+                    className="h-full bg-neutral-200 text-neutral-600 flex items-center justify-center w-[70px] active:bg-neutral-300 transition-colors"
+                >
+                    <Edit2 size={18} />
+                </button>
+                <button
+                    onClick={(e) => { e.stopPropagation(); onReveal(null); onDelete(); }}
+                    className="h-full bg-red-500 text-white flex items-center justify-center w-[70px] active:bg-red-600 transition-colors"
+                >
+                    <Trash2 size={18} />
+                </button>
+            </div>
+
+            {/* Foreground Card */}
+            <div
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onClick={() => {
+                    if (isRevealed) {
+                        onReveal(null);
+                    } else {
+                        onLog(action);
+                    }
+                }}
+                className={cn(
+                    "relative flex items-center justify-between p-4 bg-white border border-neutral-100 rounded-2xl shadow-sm cursor-pointer font-light active:scale-[0.98]",
+                    startX.current === null ? "transition-transform duration-300 ease-out" : ""
+                )}
+                style={{ transform: `translateX(${offsetX}px)` }}
+            >
+                <div className="flex items-center gap-3">
+                    <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        isEarn ? "bg-positive" : "bg-negative"
+                    )} />
+                    <span className="text-neutral-900">{action.name}</span>
+                </div>
+                <div className={cn(
+                    "font-medium tabular-nums",
+                    isEarn ? "text-positive" : "text-negative"
+                )}>
+                    {isEarn ? "+" : "-"}RM{Math.abs(action.value)}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function ActionGroup({
+    title,
+    actions,
+    isEarn,
+    logAction,
+    deleteCustomAction,
+    setEditingAction,
+    swipedActionId,
+    setSwipedActionId
+}: {
+    title: string,
+    actions: UserAction[],
+    isEarn: boolean,
+    logAction: (a: UserAction) => void,
+    deleteCustomAction: (id: string) => void,
+    setEditingAction: (a: UserAction) => void,
+    swipedActionId: string | null,
+    setSwipedActionId: (id: string | null) => void
+}) {
+    if (actions.length === 0) return null;
+
+    return (
+        <div className="mb-6">
+            <h4 className={cn(
+                "text-xs font-semibold tracking-widest uppercase mb-3 px-2 flex items-center gap-2",
+                isEarn ? "text-positive/80" : "text-negative/80"
+            )}>
+                <div className={cn("h-px flex-1", isEarn ? "bg-positive/20" : "bg-negative/20")} />
+                {title}
+                <div className={cn("h-px flex-1", isEarn ? "bg-positive/20" : "bg-negative/20")} />
+            </h4>
+            <div>
+                {actions.map((action) => (
+                    <ActionItem
+                        key={action.id}
+                        action={action}
+                        isEarn={isEarn}
+                        onLog={logAction}
+                        onEdit={() => setEditingAction(action)}
+                        onDelete={() => deleteCustomAction(action.id)}
+                        isRevealed={swipedActionId === action.id}
+                        onReveal={setSwipedActionId}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}
 
 export function ActionList({ onCreateClick }: { onCreateClick: () => void }) {
     const { customActions, logAction, deleteCustomAction } = useEconomy();
+    const [editingAction, setEditingAction] = useState<UserAction | null>(null);
+    const [swipedActionId, setSwipedActionId] = useState<string | null>(null);
 
     if (!customActions) return null;
+
+    const earningActions = customActions.filter(a => a.value > 0);
+    const spendingActions = customActions.filter(a => a.value <= 0);
 
     return (
         <div className="w-full max-w-md mx-auto px-6">
@@ -30,44 +202,32 @@ export function ActionList({ onCreateClick }: { onCreateClick: () => void }) {
                     </button>
                 </div>
             ) : (
-                <div className="space-y-3">
-                    {customActions.map((action) => {
-                        const isEarn = action.value > 0;
-                        return (
-                            <div
-                                key={action.id}
-                                className="group relative flex items-center justify-between p-4 bg-white border border-neutral-100 rounded-2xl shadow-sm hover:border-neutral-200 hover:shadow-md transition-all cursor-pointer font-light active:scale-[0.98]"
-                                onClick={() => logAction(action)}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={cn(
-                                        "w-2 h-2 rounded-full",
-                                        isEarn ? "bg-positive" : "bg-negative"
-                                    )} />
-                                    <span className="text-neutral-900">{action.name}</span>
-                                </div>
-                                <div className={cn(
-                                    "font-medium tabular-nums",
-                                    isEarn ? "text-positive" : "text-negative"
-                                )}>
-                                    {isEarn ? "+" : "-"}RM{Math.abs(action.value)}
-                                </div>
-
-                                <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 opacity-0 group-hover:opacity-100 group-hover:translate-x-full transition-all pr-4">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            deleteCustomAction(action.id);
-                                        }}
-                                        className="p-2 text-neutral-300 hover:text-negative hover:bg-negative/10 rounded-full transition-colors ml-2"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    })}
+                <div className="space-y-4">
+                    <ActionGroup
+                        title="Earning"
+                        actions={earningActions}
+                        isEarn={true}
+                        logAction={logAction}
+                        deleteCustomAction={deleteCustomAction}
+                        setEditingAction={setEditingAction}
+                        swipedActionId={swipedActionId}
+                        setSwipedActionId={setSwipedActionId}
+                    />
+                    <ActionGroup
+                        title="Spending"
+                        actions={spendingActions}
+                        isEarn={false}
+                        logAction={logAction}
+                        deleteCustomAction={deleteCustomAction}
+                        setEditingAction={setEditingAction}
+                        swipedActionId={swipedActionId}
+                        setSwipedActionId={setSwipedActionId}
+                    />
                 </div>
+            )}
+
+            {editingAction && (
+                <EditActionForm action={editingAction} onClose={() => setEditingAction(null)} />
             )}
         </div>
     );

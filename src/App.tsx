@@ -28,7 +28,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 font-sans selection:bg-neutral-200 pb-28 md:pb-12 safe-area-bottom">
+    <div className="min-h-screen bg-neutral-50 font-sans selection:bg-neutral-200 pb-28 md:pb-12 safe-area-bottom overflow-x-hidden max-w-full">
       {/* App Shell Header */}
       <header className="fixed top-0 left-0 right-0 h-[72px] bg-white/80 backdrop-blur-xl border-b border-neutral-100 z-40 flex items-center justify-center px-6">
         <h1 className="text-[11px] font-bold tracking-[0.2em] text-neutral-800 uppercase flex items-center gap-3">
