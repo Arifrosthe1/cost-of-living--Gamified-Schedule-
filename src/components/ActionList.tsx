@@ -69,7 +69,7 @@ function ActionItem({
     return (
         <div className="relative w-full overflow-hidden rounded-2xl mb-3">
             {/* Background Actions */}
-            <div className="absolute inset-y-0 right-0 flex items-center justify-end rounded-2xl overflow-hidden">
+            <div className="absolute inset-y-[1px] right-[1px] flex items-center justify-end rounded-[15px] overflow-hidden">
                 <button
                     onClick={(e) => { e.stopPropagation(); onReveal(null); onEdit(); }}
                     className="h-full bg-neutral-200 text-neutral-600 flex items-center justify-center w-[70px] active:bg-neutral-300 transition-colors"
