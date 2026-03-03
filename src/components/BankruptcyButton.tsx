@@ -4,11 +4,11 @@ import { useEconomy } from '../hooks/useEconomy';
 export function BankruptcyButton() {
     const { balance, declareBankruptcy } = useEconomy();
 
-    // Show if debt is deeper than 100 RM
-    if (balance >= -100) return null;
+    // Show if debt is RM299 or deeper
+    if (balance > -299) return null;
 
     const handleBankruptcy = () => {
-        if (window.confirm("Declare Bankruptcy? This will wipe your current debt but apply a fixed -RM50 penalty to start over. Are you sure?")) {
+        if (window.confirm("Declare Bankruptcy? This will wipe your current debt but apply a fixed -RM100 penalty to start over, and completely wipe your streak. Are you sure?")) {
             declareBankruptcy();
         }
     };

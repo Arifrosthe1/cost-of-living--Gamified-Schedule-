@@ -8,16 +8,25 @@ const DAILY_TAX = 5;
 // 25% daily debt compound
 const DEBT_RATE = 0.25;
 // Bankruptcy fee
-const BANKRUPTCY_FEE = -50;
+const BANKRUPTCY_FEE = -100;
 
 export function useEconomy() {
     const [isProcessing, setIsProcessing] = useState(true);
 
     // Computed balance from all transactions
-    const balance = useLiveQuery(async () => {
-        const txs = await db.transactions.toArray();
-        return txs.reduce((acc, tx) => acc + tx.value, 0);
-    }, [], 0);
+    const balanceData = useLiveQuery(async () => {
+        const txs = await db.transactions.orderBy('timestamp').toArray();
+        let b = 0;
+        let minB = 0;
+        for (const tx of txs) {
+            b += tx.value;
+            if (b < minB) minB = b;
+        }
+        return { balance: b, lowestBalance: minB };
+    }, [], { balance: 0, lowestBalance: 0 });
+
+    const balance = balanceData ? balanceData.balance : 0;
+    const lowestBalance = balanceData ? balanceData.lowestBalance : 0;
 
     const transactions = useLiveQuery(() => db.transactions.orderBy('timestamp').reverse().limit(50).toArray(), [], []);
     const customActions = useLiveQuery(() => db.userActions.toArray(), [], []);
@@ -212,6 +221,8 @@ export function useEconomy() {
             timestamp: Date.now(),
             type: 'bankruptcy'
         });
+
+        await db.appState.put({ key: 'currentStreak', value: '0' });
     };
 
     const setSavingsGoal = async (val: number) => {
@@ -245,6 +256,7 @@ export function useEconomy() {
 
     return {
         balance,
+        lowestBalance,
         transactions,
         customActions,
         isProcessing,

@@ -9,7 +9,7 @@ interface ProgressBarProps {
 }
 
 export function ProgressBar({ currentBalance, savingsGoal }: ProgressBarProps) {
-    const { setSavingsGoal } = useEconomy();
+    const { setSavingsGoal, lowestBalance } = useEconomy();
     const [isEditing, setIsEditing] = useState(false);
     const [goalInput, setGoalInput] = useState(savingsGoal.toString());
     const isDebt = currentBalance < 0;
@@ -19,7 +19,7 @@ export function ProgressBar({ currentBalance, savingsGoal }: ProgressBarProps) {
     let colorClass = '';
 
     if (isDebt) {
-        const maxDebt = Math.min(-50, currentBalance);
+        const maxDebt = Math.min(-50, lowestBalance);
         progressPercent = ((currentBalance - maxDebt) / (0 - maxDebt)) * 100;
         label = "Debt Recovery";
         colorClass = "bg-negative";
