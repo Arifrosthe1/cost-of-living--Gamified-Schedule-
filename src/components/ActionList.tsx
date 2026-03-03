@@ -138,10 +138,10 @@ function ActionItem({
                 className={cn(
                     "relative flex items-center justify-between bg-white border rounded-2xl cursor-pointer transition-all",
                     action.questType === 'side'
-                        ? "p-3 shadow-none border-neutral-100 hover:bg-neutral-50"
-                        : "p-4 shadow-sm border-neutral-200 hover:border-neutral-300 hover:shadow-md hover:bg-neutral-50/50",
-                    startX.current === null ? "duration-300 ease-out" : "",
-                    isClicked ? "scale-[0.96] bg-neutral-100 shadow-inner" : ""
+                        ? "p-3 shadow-none border-neutral-100 hover:bg-neutral-50 active:bg-neutral-100"
+                        : "p-4 shadow-sm border-neutral-200 hover:border-neutral-300 hover:shadow-md hover:bg-neutral-50 active:bg-neutral-100",
+                    startX.current === null ? "duration-200 ease-out" : "",
+                    isClicked ? "scale-[0.96] shadow-inner" : "active:scale-[0.98]"
                 )}
                 style={{ transform: `translateX(${offsetX}px)` }}
             >

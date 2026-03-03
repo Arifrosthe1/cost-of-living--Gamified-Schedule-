@@ -124,9 +124,9 @@ function SpendingItem({
                 onTouchEnd={handleTouchEnd}
                 onClick={handleClick}
                 className={cn(
-                    "relative flex items-center justify-between bg-white border border-neutral-100 rounded-2xl cursor-pointer transition-all p-4 shadow-sm hover:border-neutral-300 hover:bg-neutral-50/50",
-                    startX.current === null ? "duration-300 ease-out" : "",
-                    isClicked ? "scale-[0.96] bg-neutral-100 shadow-inner" : ""
+                    "relative flex items-center justify-between bg-white border border-neutral-100 rounded-2xl cursor-pointer transition-all p-4 shadow-sm hover:border-neutral-300 hover:bg-neutral-50 active:bg-neutral-100",
+                    startX.current === null ? "duration-200 ease-out" : "",
+                    isClicked ? "scale-[0.96] shadow-inner" : "active:scale-[0.98]"
                 )}
                 style={{ transform: `translateX(${offsetX}px)` }}
             >
