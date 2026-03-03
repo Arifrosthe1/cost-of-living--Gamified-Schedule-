@@ -1,4 +1,4 @@
-import { Plus, Trash2, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Zap, Star } from 'lucide-react';
 import { useEconomy } from '../hooks/useEconomy';
 import { cn } from '../utils';
 import { useState, useRef, useEffect } from 'react';
@@ -7,7 +7,6 @@ import type { UserAction } from '../store/db';
 
 function ActionItem({
     action,
-    isEarn,
     onLog,
     onEdit,
     onDelete,
@@ -15,7 +14,6 @@ function ActionItem({
     onReveal
 }: {
     action: UserAction,
-    isEarn: boolean,
     onLog: (a: UserAction) => void,
     onEdit: () => void,
     onDelete: () => void,
@@ -138,44 +136,54 @@ function ActionItem({
                 onTouchEnd={handleTouchEnd}
                 onClick={handleClick}
                 className={cn(
-                    "relative flex items-center justify-between bg-white border border-neutral-100 rounded-2xl shadow-sm cursor-pointer font-light transition-all",
-                    action.questType === 'side' ? "p-3" : "p-4",
+                    "relative flex items-center justify-between bg-white border rounded-2xl cursor-pointer transition-all",
+                    action.questType === 'side'
+                        ? "p-3 shadow-none border-neutral-100 hover:bg-neutral-50"
+                        : "p-4 shadow-sm border-neutral-200 hover:border-neutral-300 hover:shadow-md hover:bg-neutral-50/50",
                     startX.current === null ? "duration-300 ease-out" : "",
-                    isClicked ? "scale-[0.96] bg-neutral-100 shadow-inner" : "hover:bg-neutral-50"
+                    isClicked ? "scale-[0.96] bg-neutral-100 shadow-inner" : ""
                 )}
                 style={{ transform: `translateX(${offsetX}px)` }}
             >
                 <div className="flex items-center gap-3">
-                    <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        isEarn ? "bg-positive" : "bg-negative"
-                    )} />
-                    <div className="flex flex-col">
-                        <span className={cn("text-neutral-900", action.questType === 'side' ? "text-sm" : "text-base")}>{action.name}</span>
-                        {isEarn && action.questType === 'side' && (
-                            <span className="text-[9px] text-blue-500/80 font-medium uppercase tracking-wider mt-0.5">Side Quest</span>
+                    <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 group-hover:bg-white transition-colors">
+                        {action.questType === 'side' ? (
+                            <Zap size={14} className="text-blue-500 fill-blue-500/20" />
+                        ) : (
+                            <Star size={16} className="text-orange-500 fill-orange-500/20" />
                         )}
-                        {isEarn && (!action.questType || action.questType === 'main') && (
-                            <span className="text-[9px] text-orange-500/80 font-medium uppercase tracking-wider mt-0.5">Main Quest</span>
+                    </div>
+                    <div className="flex flex-col">
+                        <span className={cn(
+                            "text-neutral-900 leading-tight",
+                            action.questType === 'side' ? "text-sm font-medium" : "text-base font-semibold"
+                        )}>
+                            {action.name}
+                        </span>
+                        {action.questType === 'side' && (
+                            <span className="text-[9px] text-blue-500/80 font-bold uppercase tracking-widest mt-0.5">Side Quest</span>
+                        )}
+                        {(!action.questType || action.questType === 'main') && (
+                            <span className="text-[9px] text-orange-500/80 font-bold uppercase tracking-widest mt-0.5">Main Quest</span>
                         )}
                     </div>
                 </div>
                 <div className={cn(
-                    "font-medium tabular-nums",
-                    isEarn ? "text-positive" : "text-negative",
+                    "font-bold tabular-nums tracking-tight",
+                    "text-positive",
                     action.questType === 'side' ? "text-sm" : "text-base"
                 )}>
-                    {isEarn ? "+" : "-"}RM{Math.abs(action.value)}
+                    +{Math.abs(action.value)}
                 </div>
             </div>
         </div>
     );
 }
 
-function ActionGroup({
+function QuestGroup({
     title,
     actions,
-    isEarn,
+    isSideQuest,
     logAction,
     deleteCustomAction,
     setEditingAction,
@@ -184,7 +192,7 @@ function ActionGroup({
 }: {
     title: string,
     actions: UserAction[],
-    isEarn: boolean,
+    isSideQuest: boolean,
     logAction: (a: UserAction) => void,
     deleteCustomAction: (id: string) => void,
     setEditingAction: (a: UserAction) => void,
@@ -195,26 +203,23 @@ function ActionGroup({
 
     return (
         <div className="mb-6">
-            <h4 className={cn(
-                "text-xs font-semibold tracking-widest uppercase mb-3 px-2 flex items-center gap-2",
-                isEarn ? "text-positive/80" : "text-negative/80"
-            )}>
-                <div className={cn("h-px flex-1", isEarn ? "bg-positive/20" : "bg-negative/20")} />
+            <h4 className="text-xs font-bold tracking-[0.2em] text-neutral-400 uppercase mb-3 px-2 flex items-center gap-2">
+                <div className="h-px w-4 bg-neutral-200" />
                 {title}
-                <div className={cn("h-px flex-1", isEarn ? "bg-positive/20" : "bg-negative/20")} />
+                <div className="h-px flex-1 bg-neutral-200" />
             </h4>
-            <div>
+            <div className={cn(isSideQuest ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3")}>
                 {actions.map((action) => (
-                    <ActionItem
-                        key={action.id}
-                        action={action}
-                        isEarn={isEarn}
-                        onLog={logAction}
-                        onEdit={() => setEditingAction(action)}
-                        onDelete={() => deleteCustomAction(action.id)}
-                        isRevealed={swipedActionId === action.id}
-                        onReveal={setSwipedActionId}
-                    />
+                    <div key={action.id} className={cn(isSideQuest ? "" : "w-full")}>
+                        <ActionItem
+                            action={action}
+                            onLog={logAction}
+                            onEdit={() => setEditingAction(action)}
+                            onDelete={() => deleteCustomAction(action.id)}
+                            isRevealed={swipedActionId === action.id}
+                            onReveal={setSwipedActionId}
+                        />
+                    </div>
                 ))}
             </div>
         </div>
@@ -239,10 +244,18 @@ export function ActionList({ onCreateClick }: { onCreateClick: () => void }) {
         setToast({ id: txId as number, message: `Logged ${action.name}` });
     };
 
+    const sortHabits = (a: UserAction, b: UserAction) => {
+        if (Math.abs(b.value) !== Math.abs(a.value)) {
+            return Math.abs(b.value) - Math.abs(a.value);
+        }
+        return a.name.localeCompare(b.name);
+    };
+
     if (!customActions) return null;
 
-    const earningActions = customActions.filter(a => a.value > 0);
-    const spendingActions = customActions.filter(a => a.value <= 0);
+    const earningActions = customActions.filter(a => a.value > 0).sort(sortHabits);
+    const sideQuests = earningActions.filter(a => a.questType === 'side');
+    const mainQuests = earningActions.filter(a => a.questType !== 'side');
 
     return (
         <div className="w-full max-w-md mx-auto px-6">
@@ -256,32 +269,32 @@ export function ActionList({ onCreateClick }: { onCreateClick: () => void }) {
                 </button>
             </div>
 
-            {customActions.length === 0 ? (
+            {earningActions.length === 0 ? (
                 <div className="text-center py-12 px-4 border border-dashed border-neutral-200 rounded-2xl bg-neutral-50/50">
-                    <p className="text-neutral-500 font-light text-sm mb-4">No habits defined yet.</p>
+                    <p className="text-neutral-500 font-light text-sm mb-4">No quests defined yet.</p>
                     <button
                         onClick={onCreateClick}
                         className="text-neutral-900 font-medium text-sm hover:underline"
                     >
-                        Create your first habit
+                        Create your first quest
                     </button>
                 </div>
             ) : (
-                <div className="space-y-4">
-                    <ActionGroup
-                        title="Earning"
-                        actions={earningActions}
-                        isEarn={true}
+                <div className="space-y-2">
+                    <QuestGroup
+                        title="Side Quests"
+                        actions={sideQuests}
+                        isSideQuest={true}
                         logAction={handleLog}
                         deleteCustomAction={deleteCustomAction}
                         setEditingAction={setEditingAction}
                         swipedActionId={swipedActionId}
                         setSwipedActionId={setSwipedActionId}
                     />
-                    <ActionGroup
-                        title="Spending"
-                        actions={spendingActions}
-                        isEarn={false}
+                    <QuestGroup
+                        title="Main Quests"
+                        actions={mainQuests}
+                        isSideQuest={false}
                         logAction={handleLog}
                         deleteCustomAction={deleteCustomAction}
                         setEditingAction={setEditingAction}
