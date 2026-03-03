@@ -141,7 +141,7 @@ function ActionItem({
                     "relative flex items-center justify-between bg-white border border-neutral-100 rounded-2xl shadow-sm cursor-pointer font-light transition-all",
                     action.questType === 'side' ? "p-3" : "p-4",
                     startX.current === null ? "duration-300 ease-out" : "",
-                    isClicked ? "scale-[0.96] bg-neutral-50 shadow-inner" : "hover:bg-neutral-50/50"
+                    isClicked ? "scale-[0.96] bg-neutral-100 shadow-inner" : "hover:bg-neutral-50"
                 )}
                 style={{ transform: `translateX(${offsetX}px)` }}
             >
