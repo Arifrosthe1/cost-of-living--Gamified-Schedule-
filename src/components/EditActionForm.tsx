@@ -9,6 +9,7 @@ export function EditActionForm({ action, onClose }: { action: UserAction, onClos
     const [name, setName] = useState(action.name);
     const [value, setValue] = useState(Math.abs(action.value).toString());
     const [type, setType] = useState<'earn' | 'spend'>(action.value > 0 ? 'earn' : 'spend');
+    const [questType, setQuestType] = useState<'main' | 'side'>(action.questType === 'side' ? 'side' : 'main');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -22,6 +23,7 @@ export function EditActionForm({ action, onClose }: { action: UserAction, onClos
         updateCustomAction(action.id, {
             name,
             value: finalValue,
+            questType: type === 'earn' ? questType : 'none',
         });
         onClose();
     };
@@ -59,6 +61,34 @@ export function EditActionForm({ action, onClose }: { action: UserAction, onClos
                             Spending
                         </button>
                     </div>
+
+                    {type === 'earn' && (
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-600 mb-2">Quest Type</label>
+                            <div className="flex bg-neutral-100 p-1 rounded-2xl">
+                                <button
+                                    type="button"
+                                    onClick={() => setQuestType('main')}
+                                    className={cn(
+                                        "flex-1 py-2 rounded-xl text-sm font-medium transition-all",
+                                        questType === 'main' ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700"
+                                    )}
+                                >
+                                    Main Quest
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setQuestType('side')}
+                                    className={cn(
+                                        "flex-1 py-2 rounded-xl text-sm font-medium transition-all",
+                                        questType === 'side' ? "bg-white shadow-sm text-blue-600" : "text-neutral-500 hover:text-neutral-700"
+                                    )}
+                                >
+                                    Side Quest (Micro)
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     <div>
                         <label className="block text-sm font-medium text-neutral-600 mb-2">Habit Name</label>

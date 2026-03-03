@@ -4,6 +4,7 @@ export interface UserAction {
     id: string;
     name: string;
     value: number; // Positive for earning, negative for spending
+    questType?: 'main' | 'side' | 'none'; // Distinguishes quest magnitude
 }
 
 export interface Transaction {

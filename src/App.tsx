@@ -4,8 +4,9 @@ import { ActionList } from './components/ActionList';
 import { CreateActionForm } from './components/CreateActionForm';
 import { BankruptcyButton } from './components/BankruptcyButton';
 import { DebugPanel } from './components/DebugPanel';
-import { Activity, Flame, LayoutDashboard, Gift } from 'lucide-react';
+import { Activity, Flame, LayoutDashboard, Gift, Bell, BellOff } from 'lucide-react';
 import { useEconomy } from './hooks/useEconomy';
+import { useNotifications } from './hooks/useNotifications';
 import { cn } from './utils';
 import { ProgressBar } from './components/ProgressBar';
 import { RewardStore } from './components/RewardStore';
@@ -18,6 +19,7 @@ function App() {
   const [showCreateActionForm, setShowCreateActionForm] = useState(false);
   const [showCreateRewardForm, setShowCreateRewardForm] = useState(false);
   const { isProcessing, balance, streakCount, savingsGoal } = useEconomy();
+  const { permission, requestPermission, testNotification } = useNotifications();
 
   if (isProcessing) {
     return (
@@ -35,13 +37,35 @@ function App() {
           Cost <span className="w-1.5 h-1.5 bg-neutral-300 rounded-full"></span> Living
         </h1>
 
-        {/* Streak Indicator */}
-        {streakCount > 0 && (
-          <div className="absolute right-6 flex items-center gap-1 text-orange-500 font-bold text-sm bg-orange-50 px-2 py-1 rounded-full animate-in fade-in slide-in-from-top-2">
-            <Flame size={14} className="fill-orange-500" />
-            <span>{streakCount}</span>
-          </div>
-        )}
+        {/* Streak & Notification Indicator */}
+        <div className="absolute right-6 flex items-center gap-2">
+          {permission !== 'granted' && (
+            <button
+              onClick={requestPermission}
+              className="p-1.5 text-neutral-400 hover:text-neutral-600 bg-neutral-50 hover:bg-neutral-100 rounded-full transition-colors active:scale-95 animate-in fade-in"
+              title="Enable Notifications"
+            >
+              <BellOff size={16} />
+            </button>
+          )}
+
+          {permission === 'granted' && (
+            <button
+              onClick={testNotification}
+              className="p-1.5 text-neutral-400 hover:text-neutral-600 bg-neutral-50 hover:bg-neutral-100 rounded-full transition-colors active:scale-95 animate-in fade-in"
+              title="Test Notification"
+            >
+              <Bell size={16} />
+            </button>
+          )}
+
+          {streakCount > 0 && (
+            <div className="flex items-center gap-1 text-orange-500 font-bold text-sm bg-orange-50 px-2 py-1 rounded-full animate-in fade-in slide-in-from-top-2">
+              <Flame size={14} className="fill-orange-500" />
+              <span>{streakCount}</span>
+            </div>
+          )}
+        </div>
       </header>
 
       {/* Main Content */}

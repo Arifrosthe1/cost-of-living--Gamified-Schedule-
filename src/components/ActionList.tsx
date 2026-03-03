@@ -97,7 +97,8 @@ function ActionItem({
                     }
                 }}
                 className={cn(
-                    "relative flex items-center justify-between p-4 bg-white border border-neutral-100 rounded-2xl shadow-sm cursor-pointer font-light active:scale-[0.98]",
+                    "relative flex items-center justify-between bg-white border border-neutral-100 rounded-2xl shadow-sm cursor-pointer font-light active:scale-[0.98]",
+                    action.questType === 'side' ? "p-3" : "p-4",
                     startX.current === null ? "transition-transform duration-300 ease-out" : ""
                 )}
                 style={{ transform: `translateX(${offsetX}px)` }}
@@ -107,11 +108,20 @@ function ActionItem({
                         "w-2 h-2 rounded-full",
                         isEarn ? "bg-positive" : "bg-negative"
                     )} />
-                    <span className="text-neutral-900">{action.name}</span>
+                    <div className="flex flex-col">
+                        <span className={cn("text-neutral-900", action.questType === 'side' ? "text-sm" : "text-base")}>{action.name}</span>
+                        {isEarn && action.questType === 'side' && (
+                            <span className="text-[9px] text-blue-500/80 font-medium uppercase tracking-wider mt-0.5">Side Quest</span>
+                        )}
+                        {isEarn && (!action.questType || action.questType === 'main') && (
+                            <span className="text-[9px] text-orange-500/80 font-medium uppercase tracking-wider mt-0.5">Main Quest</span>
+                        )}
+                    </div>
                 </div>
                 <div className={cn(
                     "font-medium tabular-nums",
-                    isEarn ? "text-positive" : "text-negative"
+                    isEarn ? "text-positive" : "text-negative",
+                    action.questType === 'side' ? "text-sm" : "text-base"
                 )}>
                     {isEarn ? "+" : "-"}RM{Math.abs(action.value)}
                 </div>
