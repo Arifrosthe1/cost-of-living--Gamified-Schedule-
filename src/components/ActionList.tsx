@@ -23,8 +23,11 @@ function ActionItem({
     onReveal: (id: string | null) => void
 }) {
     const startX = useRef<number | null>(null);
+    const startY = useRef<number | null>(null);
     const currentX = useRef<number>(0);
+    const isSwiping = useRef<boolean | null>(null);
     const [offsetX, setOffsetX] = useState(0);
+    const [isClicked, setIsClicked] = useState(false);
     const ACTION_WIDTH = 140; // width of Edit + Delete buttons (70px each)
 
     useEffect(() => {
@@ -37,24 +40,48 @@ function ActionItem({
 
     const handleTouchStart = (e: React.TouchEvent) => {
         startX.current = e.touches[0].clientX;
+        startY.current = e.touches[0].clientY;
+        isSwiping.current = null;
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
-        if (startX.current === null) return;
-        const diff = e.touches[0].clientX - startX.current;
+        if (startX.current === null || startY.current === null) return;
 
-        if (diff < 0) {
-            currentX.current = Math.max(diff, -ACTION_WIDTH - 20); // slight overscroll
-            setOffsetX(isRevealed ? -ACTION_WIDTH + currentX.current : currentX.current);
-        } else if (isRevealed && diff > 0) {
-            currentX.current = Math.min(diff, ACTION_WIDTH + 20);
-            setOffsetX(Math.min(0, -ACTION_WIDTH + currentX.current));
+        const currentClientX = e.touches[0].clientX;
+        const currentClientY = e.touches[0].clientY;
+        const diffX = currentClientX - startX.current;
+        const diffY = currentClientY - startY.current;
+
+        // Directional lock
+        if (isSwiping.current === null) {
+            if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) {
+                isSwiping.current = Math.abs(diffX) > Math.abs(diffY);
+            }
+        }
+
+        if (isSwiping.current) {
+            let effectiveDiffX = diffX;
+            // Require a 40px threshold before we even visually move the card, to further prevent accidental jiggles
+            if (!isRevealed && diffX < 0) {
+                if (Math.abs(diffX) < 40) return;
+                effectiveDiffX = diffX + 40; // Start sliding smoothly after 40px drag
+                if (effectiveDiffX > 0) effectiveDiffX = 0;
+            }
+
+            if (effectiveDiffX < 0) {
+                currentX.current = Math.max(effectiveDiffX, -ACTION_WIDTH - 20); // slight overscroll
+                setOffsetX(isRevealed ? -ACTION_WIDTH + currentX.current : currentX.current);
+            } else if (isRevealed && diffX > 0) {
+                currentX.current = Math.min(diffX, ACTION_WIDTH + 20);
+                setOffsetX(Math.min(0, -ACTION_WIDTH + currentX.current));
+            }
         }
     };
 
     const handleTouchEnd = () => {
-        if (startX.current === null) return;
         startX.current = null;
+        startY.current = null;
+        isSwiping.current = null;
 
         if (offsetX < -ACTION_WIDTH / 2) {
             onReveal(action.id);
@@ -64,6 +91,26 @@ function ActionItem({
             setOffsetX(0);
         }
         currentX.current = 0;
+    };
+
+    const handleClick = () => {
+        if (isRevealed) {
+            onReveal(null);
+            return;
+        }
+
+        // Haptic feedback
+        if (navigator.vibrate) {
+            navigator.vibrate(50);
+        }
+
+        // Visual micro-animation
+        setIsClicked(true);
+        setTimeout(() => {
+            setIsClicked(false);
+            // Delay the actual action log slightly so animation finishes gracefully
+            setTimeout(() => onLog(action), 150);
+        }, 150);
     };
 
     return (
@@ -89,17 +136,12 @@ function ActionItem({
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                onClick={() => {
-                    if (isRevealed) {
-                        onReveal(null);
-                    } else {
-                        onLog(action);
-                    }
-                }}
+                onClick={handleClick}
                 className={cn(
-                    "relative flex items-center justify-between bg-white border border-neutral-100 rounded-2xl shadow-sm cursor-pointer font-light active:scale-[0.98]",
+                    "relative flex items-center justify-between bg-white border border-neutral-100 rounded-2xl shadow-sm cursor-pointer font-light transition-all",
                     action.questType === 'side' ? "p-3" : "p-4",
-                    startX.current === null ? "transition-transform duration-300 ease-out" : ""
+                    startX.current === null ? "duration-300 ease-out" : "",
+                    isClicked ? "scale-[0.96] bg-neutral-50 shadow-inner" : "hover:bg-neutral-50/50"
                 )}
                 style={{ transform: `translateX(${offsetX}px)` }}
             >
