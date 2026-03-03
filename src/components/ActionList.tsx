@@ -136,45 +136,53 @@ function ActionItem({
                 onTouchEnd={handleTouchEnd}
                 onClick={handleClick}
                 className={cn(
-                    "relative flex items-center justify-between bg-white border rounded-2xl cursor-pointer transition-all",
+                    "relative bg-white border rounded-2xl cursor-pointer transition-all w-full box-border",
                     action.questType === 'side'
-                        ? "p-3 shadow-none border-neutral-100 hover:bg-neutral-50 active:bg-neutral-100"
-                        : "p-4 shadow-sm border-neutral-200 hover:border-neutral-300 hover:shadow-md hover:bg-neutral-50 active:bg-neutral-100",
+                        ? "flex flex-col justify-between items-start min-h-[104px] p-4 shadow-none border-neutral-100 hover:bg-neutral-50 active:bg-neutral-100"
+                        : "flex items-center justify-between p-4 shadow-sm border-neutral-200 hover:border-neutral-300 hover:shadow-md hover:bg-neutral-50 active:bg-neutral-100",
                     startX.current === null ? "duration-200 ease-out" : "",
                     isClicked ? "scale-[0.96] shadow-inner" : "active:scale-[0.98]"
                 )}
                 style={{ transform: `translateX(${offsetX}px)` }}
             >
-                <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 group-hover:bg-white transition-colors">
-                        {action.questType === 'side' ? (
-                            <Zap size={14} className="text-blue-500 fill-blue-500/20" />
-                        ) : (
-                            <Star size={16} className="text-orange-500 fill-orange-500/20" />
-                        )}
-                    </div>
-                    <div className="flex flex-col">
-                        <span className={cn(
-                            "text-neutral-900 leading-tight",
-                            action.questType === 'side' ? "text-sm font-medium" : "text-base font-semibold"
-                        )}>
-                            {action.name}
-                        </span>
-                        {action.questType === 'side' && (
-                            <span className="text-[9px] text-blue-500/80 font-bold uppercase tracking-widest mt-0.5">Side Quest</span>
-                        )}
-                        {(!action.questType || action.questType === 'main') && (
-                            <span className="text-[9px] text-orange-500/80 font-bold uppercase tracking-widest mt-0.5">Main Quest</span>
-                        )}
-                    </div>
-                </div>
-                <div className={cn(
-                    "font-bold tabular-nums tracking-tight",
-                    "text-positive",
-                    action.questType === 'side' ? "text-sm" : "text-base"
-                )}>
-                    +{Math.abs(action.value)}
-                </div>
+                {action.questType === 'side' ? (
+                    <>
+                        {/* Top Section */}
+                        <div className="w-full flex justify-between items-start mb-2">
+                            <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 group-hover:bg-white transition-colors">
+                                <Zap size={14} className="text-blue-500 fill-blue-500/20" />
+                            </div>
+                            <div className="font-bold tabular-nums tracking-tight text-positive text-sm mt-1">
+                                +{Math.abs(action.value)}
+                            </div>
+                        </div>
+                        {/* Bottom Section */}
+                        <div className="mt-auto w-full">
+                            <span className="text-neutral-900 leading-tight text-sm font-medium break-words max-w-full block">
+                                {action.name}
+                            </span>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="flex items-center gap-3">
+                            <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 group-hover:bg-white transition-colors">
+                                <Star size={16} className="text-orange-500 fill-orange-500/20" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-neutral-900 leading-tight text-base font-semibold block pt-0.5">
+                                    {action.name}
+                                </span>
+                                {(!action.questType || action.questType === 'main') && (
+                                    <span className="text-[9px] text-orange-500/80 font-bold uppercase tracking-widest mt-0.5 block">Main Quest</span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="font-bold tabular-nums tracking-tight text-positive text-base flex-shrink-0">
+                            +{Math.abs(action.value)}
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
