@@ -222,9 +222,22 @@ function ActionGroup({
 }
 
 export function ActionList({ onCreateClick }: { onCreateClick: () => void }) {
-    const { customActions, logAction, deleteCustomAction } = useEconomy();
+    const { customActions, logAction, deleteCustomAction, undoTransaction } = useEconomy();
     const [editingAction, setEditingAction] = useState<UserAction | null>(null);
     const [swipedActionId, setSwipedActionId] = useState<string | null>(null);
+    const [toast, setToast] = useState<{ id: number, message: string } | null>(null);
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [toast]);
+
+    const handleLog = async (action: UserAction) => {
+        const txId = await logAction(action);
+        setToast({ id: txId as number, message: `Logged ${action.name}` });
+    };
 
     if (!customActions) return null;
 
@@ -259,7 +272,7 @@ export function ActionList({ onCreateClick }: { onCreateClick: () => void }) {
                         title="Earning"
                         actions={earningActions}
                         isEarn={true}
-                        logAction={logAction}
+                        logAction={handleLog}
                         deleteCustomAction={deleteCustomAction}
                         setEditingAction={setEditingAction}
                         swipedActionId={swipedActionId}
@@ -269,7 +282,7 @@ export function ActionList({ onCreateClick }: { onCreateClick: () => void }) {
                         title="Spending"
                         actions={spendingActions}
                         isEarn={false}
-                        logAction={logAction}
+                        logAction={handleLog}
                         deleteCustomAction={deleteCustomAction}
                         setEditingAction={setEditingAction}
                         swipedActionId={swipedActionId}
@@ -280,6 +293,23 @@ export function ActionList({ onCreateClick }: { onCreateClick: () => void }) {
 
             {editingAction && (
                 <EditActionForm action={editingAction} onClose={() => setEditingAction(null)} />
+            )}
+
+            {/* Undo Toast */}
+            {toast && (
+                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-neutral-900 text-white px-5 py-3 rounded-2xl shadow-xl shadow-neutral-900/20 animate-in slide-in-from-bottom-5 fade-in duration-300 pointer-events-auto">
+                    <span className="text-sm font-light whitespace-nowrap">{toast.message}</span>
+                    <div className="w-px h-4 bg-white/20" />
+                    <button
+                        onClick={() => {
+                            undoTransaction(toast.id);
+                            setToast(null);
+                        }}
+                        className="text-sm font-medium text-orange-400 hover:text-orange-300 active:scale-95 transition-all uppercase tracking-wider"
+                    >
+                        Undo
+                    </button>
+                </div>
             )}
         </div>
     );

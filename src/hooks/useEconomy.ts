@@ -184,13 +184,15 @@ export function useEconomy() {
 
         const txName = multiplier > 1 ? `${action.name} (Bonus x1.2)` : action.name;
 
-        await db.transactions.add({
+        const id = await db.transactions.add({
             actionId: action.id,
             actionName: txName,
             value: finalValue,
             timestamp: Date.now(),
             type: 'user'
         });
+
+        return id as number;
     };
 
     const addCustomAction = async (action: Omit<UserAction, "id">) => {
@@ -206,6 +208,10 @@ export function useEconomy() {
 
     const deleteCustomAction = async (id: string) => {
         await db.userActions.delete(id);
+    };
+
+    const undoTransaction = async (id: number) => {
+        await db.transactions.delete(id);
     };
 
     const declareBankruptcy = async () => {
@@ -268,6 +274,7 @@ export function useEconomy() {
         addCustomAction,
         updateCustomAction,
         deleteCustomAction,
+        undoTransaction,
         declareBankruptcy,
         simulateDayPass,
         addReward,
