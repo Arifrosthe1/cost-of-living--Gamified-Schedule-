@@ -4,7 +4,7 @@ import { ActionList } from './components/ActionList';
 import { CreateActionForm } from './components/CreateActionForm';
 import { BankruptcyButton } from './components/BankruptcyButton';
 import { DebugPanel } from './components/DebugPanel';
-import { Activity, Flame, LayoutDashboard, Gift, Bell, BellOff } from 'lucide-react';
+import { Activity, Flame, LayoutDashboard, Gift, BellOff } from 'lucide-react';
 import { useEconomy } from './hooks/useEconomy';
 import { useNotifications } from './hooks/useNotifications';
 import { cn } from './utils';
@@ -19,7 +19,7 @@ function App() {
   const [showCreateActionForm, setShowCreateActionForm] = useState(false);
   const [showCreateRewardForm, setShowCreateRewardForm] = useState(false);
   const { isProcessing, balance, streakCount, savingsGoal } = useEconomy();
-  const { permission, requestPermission, testNotification } = useNotifications();
+  const { permission, requestPermission } = useNotifications();
 
   if (isProcessing) {
     return (
@@ -46,16 +46,6 @@ function App() {
               title="Enable Notifications"
             >
               <BellOff size={16} />
-            </button>
-          )}
-
-          {permission === 'granted' && (
-            <button
-              onClick={testNotification}
-              className="p-1.5 text-neutral-400 hover:text-neutral-600 bg-neutral-50 hover:bg-neutral-100 rounded-full transition-colors active:scale-95 animate-in fade-in"
-              title="Test Notification"
-            >
-              <Bell size={16} />
             </button>
           )}
 

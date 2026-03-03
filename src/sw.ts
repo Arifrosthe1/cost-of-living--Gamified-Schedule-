@@ -40,13 +40,6 @@ self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'CANCEL_EVENING_WARNING') {
         cancelEveningWarning();
     }
-    if (event.data && event.data.type === 'TEST_NOTIFICATION') {
-        self.registration.showNotification("🧪 Test Notification", {
-            body: "If you can see this, web push notifications are working!",
-            icon: '/pwa-192x192.png',
-            tag: 'test-notification'
-        });
-    }
 });
 
 async function scheduleNotifications() {

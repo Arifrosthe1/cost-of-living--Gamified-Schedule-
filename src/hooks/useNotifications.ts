@@ -40,22 +40,9 @@ export function useNotifications() {
         }
     };
 
-    const testNotification = () => {
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller && permission === 'granted') {
-            navigator.serviceWorker.controller.postMessage({
-                type: 'TEST_NOTIFICATION'
-            });
-        } else if (permission !== 'granted') {
-            alert('Notification permission is not granted.');
-        } else {
-            alert('Service worker not ready.');
-        }
-    };
-
     return {
         permission,
         requestPermission,
-        cancelEveningWarning,
-        testNotification
+        cancelEveningWarning
     };
 }
