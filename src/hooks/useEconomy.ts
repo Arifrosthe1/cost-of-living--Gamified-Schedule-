@@ -262,6 +262,10 @@ export function useEconomy() {
         await db.rewards.delete(id);
     };
 
+    const updateReward = async (id: string, reward: Partial<Omit<Reward, "id">>) => {
+        await db.rewards.update(id, reward);
+    };
+
     const purchaseReward = async (reward: Reward) => {
         if (balance < reward.cost) return false;
 
@@ -318,6 +322,7 @@ export function useEconomy() {
         simulateDayPass,
         addReward,
         deleteReward,
+        updateReward,
         purchaseReward,
         addTodo,
         completeTodo,

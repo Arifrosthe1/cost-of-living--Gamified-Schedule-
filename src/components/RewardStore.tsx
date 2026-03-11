@@ -3,7 +3,8 @@ import { useEconomy } from '../hooks/useEconomy';
 import { cn } from '../utils';
 import { useState, useRef, useEffect } from 'react';
 import { EditActionForm } from './EditActionForm';
-import type { UserAction } from '../store/db';
+import { EditRewardForm } from './EditRewardForm';
+import type { UserAction, Reward } from '../store/db';
 
 function SpendingItem({
     action,
@@ -151,6 +152,7 @@ function SpendingItem({
 export function RewardStore({ onCreateClick }: { onCreateClick: () => void }) {
     const { storedRewards, customActions, balance, purchaseReward, deleteReward, logAction, deleteCustomAction, undoTransaction } = useEconomy();
     const [editingAction, setEditingAction] = useState<UserAction | null>(null);
+    const [editingReward, setEditingReward] = useState<Reward | null>(null);
     const [swipedActionId, setSwipedActionId] = useState<string | null>(null);
     const [toast, setToast] = useState<{ id: number, message: string } | null>(null);
 
@@ -269,15 +271,26 @@ export function RewardStore({ onCreateClick }: { onCreateClick: () => void }) {
                                         {reward.tier}
                                     </span>
 
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            deleteReward(reward.id);
-                                        }}
-                                        className="p-1.5 text-neutral-300 hover:text-negative hover:bg-negative/10 rounded-full transition-colors opacity-0 group-hover:opacity-100"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditingReward(reward);
+                                            }}
+                                            className="p-1.5 text-neutral-300 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-colors"
+                                        >
+                                            <Edit2 size={14} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteReward(reward.id);
+                                            }}
+                                            className="p-1.5 text-neutral-300 hover:text-negative hover:bg-negative/10 rounded-full transition-colors"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="flex-1">
@@ -309,6 +322,10 @@ export function RewardStore({ onCreateClick }: { onCreateClick: () => void }) {
 
             {editingAction && (
                 <EditActionForm action={editingAction} onClose={() => setEditingAction(null)} />
+            )}
+
+            {editingReward && (
+                <EditRewardForm reward={editingReward} onClose={() => setEditingReward(null)} />
             )}
 
             {/* Undo Toast */}
