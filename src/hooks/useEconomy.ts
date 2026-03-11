@@ -231,20 +231,26 @@ export function useEconomy() {
     };
 
     const declareBankruptcy = async () => {
-        const allTxs = await db.transactions.toArray();
-        let currentBalance = allTxs.reduce((acc, tx) => acc + tx.value, 0);
+        // 🚨 TOTAL RESET WIPE 🚨
+        await db.userActions.clear();
+        await db.todos.clear();
+        await db.rewards.clear();
+        await db.transactions.clear();
+        await db.appState.clear();
 
-        // The deficit amount to zero it out
-        const deficitToZero = -currentBalance;
-
+        // Seed the initial Permadeath penalty
         await db.transactions.add({
-            actionName: 'Bankruptcy Declaration',
-            value: deficitToZero + BANKRUPTCY_FEE,
+            actionName: 'Bankruptcy Penalty',
+            value: BANKRUPTCY_FEE,
             timestamp: Date.now(),
             type: 'bankruptcy'
         });
 
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+        // Reset tracking states correctly
         await db.appState.put({ key: 'currentStreak', value: '0' });
+        await db.appState.put({ key: 'lastProcessDate', value: todayStr });
     };
 
     const setSavingsGoal = async (val: number) => {
