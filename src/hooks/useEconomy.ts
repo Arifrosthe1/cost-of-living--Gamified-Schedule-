@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Transaction, type UserAction, type Reward } from '../store/db';
+import { db, type Transaction, type UserAction, type Reward, type Todo } from '../store/db';
 import { startOfDay, differenceInDays, format } from 'date-fns';
 import { useEffect, useState } from 'react';
 
@@ -31,6 +31,7 @@ export function useEconomy() {
     const transactions = useLiveQuery(() => db.transactions.orderBy('timestamp').reverse().limit(50).toArray(), [], []);
     const customActions = useLiveQuery(() => db.userActions.toArray(), [], []);
     const storedRewards = useLiveQuery(() => db.rewards.toArray(), [], []);
+    const todos = useLiveQuery(() => db.todos.orderBy('targetDate').toArray(), [], []);
 
     // Streaks & Goals
     const streakCount = useLiveQuery(async () => {
@@ -94,6 +95,21 @@ export function useEconomy() {
                     while (differenceInDays(todayDate, loopDate) > 0) {
                         loopDate = new Date(loopDate.getTime() + 24 * 60 * 60 * 1000); // Step forward EXACTLY one day
                         daysProcessed++;
+                        const loopDateStr = format(loopDate, 'yyyy-MM-dd');
+
+                        // --- To-Do Penalty Logic ---
+                        // Find any uncompleted To-Dos assigned to this precise day
+                        const missedTodos = await db.todos.where('targetDate').equals(loopDateStr).toArray();
+                        for (const todo of missedTodos) {
+                            currentBalance -= 15;
+                            newTransactions.push({
+                                actionName: `Failed To-Do: ${todo.name}`,
+                                value: -15,
+                                timestamp: Date.now() + daysProcessed * 2 - 1, // Order before tax/debt
+                                type: 'user'
+                            });
+                            await db.todos.delete(todo.id);
+                        }
 
                         // Step A: Apply Daily Tax
                         currentBalance -= DAILY_TAX;
@@ -260,11 +276,34 @@ export function useEconomy() {
         return true;
     };
 
+    const addTodo = async (todo: Omit<Todo, "id" | "createdAt">) => {
+        await db.todos.add({
+            id: crypto.randomUUID(),
+            createdAt: Date.now(),
+            ...todo
+        });
+    };
+
+    const completeTodo = async (todo: Todo) => {
+        await db.transactions.add({
+            actionName: `Completed: ${todo.name}`,
+            value: 15,
+            timestamp: Date.now(),
+            type: 'user'
+        });
+        await db.todos.delete(todo.id);
+    };
+
+    const deleteTodo = async (id: string) => {
+        await db.todos.delete(id);
+    };
+
     return {
         balance,
         lowestBalance,
         transactions,
         customActions,
+        todos,
         isProcessing,
         streakCount,
         savingsGoal,
@@ -279,6 +318,9 @@ export function useEconomy() {
         simulateDayPass,
         addReward,
         deleteReward,
-        purchaseReward
+        purchaseReward,
+        addTodo,
+        completeTodo,
+        deleteTodo
     };
 }

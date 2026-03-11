@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { WalletDisplay } from './components/WalletDisplay';
 import { ActionList } from './components/ActionList';
+import { TodoList } from './components/TodoList';
 import { CreateActionForm } from './components/CreateActionForm';
 import { BankruptcyButton } from './components/BankruptcyButton';
 import { DebugPanel } from './components/DebugPanel';
@@ -75,6 +76,7 @@ function App() {
         {activeTab === 'dashboard' && (
           <div className="w-full flex flex-col items-center animate-in slide-in-from-left duration-500">
             <ActionList onCreateClick={() => setShowCreateActionForm(true)} />
+            <TodoList />
             <BankruptcyButton />
           </div>
         )}

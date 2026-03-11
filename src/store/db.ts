@@ -7,6 +7,13 @@ export interface UserAction {
     questType?: 'main' | 'side' | 'none'; // Distinguishes quest magnitude
 }
 
+export interface Todo {
+    id: string;
+    name: string;
+    targetDate: string; // 'yyyy-MM-dd' format to track designated day
+    createdAt: number;
+}
+
 export interface Transaction {
     id?: number;
     actionId?: string;
@@ -33,6 +40,7 @@ export class EconomyDB extends Dexie {
     transactions!: Table<Transaction>;
     appState!: Table<AppState>;
     rewards!: Table<Reward>;
+    todos!: Table<Todo>;
 
     constructor() {
         super('EconomyDB');
@@ -41,6 +49,13 @@ export class EconomyDB extends Dexie {
             transactions: '++id, timestamp, type',
             appState: 'key',
             rewards: 'id, tier'
+        });
+        this.version(3).stores({
+            userActions: 'id',
+            transactions: '++id, timestamp, type',
+            appState: 'key',
+            rewards: 'id, tier',
+            todos: 'id, targetDate'
         });
     }
 }
