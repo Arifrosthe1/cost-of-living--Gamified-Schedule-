@@ -177,6 +177,14 @@ export function RewardStore({ onCreateClick }: { onCreateClick: () => void }) {
 
     const spendingActions = customActions.filter(a => a.value <= 0).sort(sortHabits);
 
+    const tierOrder: Record<string, number> = { epic: 3, rare: 2, common: 1 };
+    const sortedRewards = [...storedRewards].sort((a, b) => {
+        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
+            return tierOrder[b.tier] - tierOrder[a.tier];
+        }
+        return b.cost - a.cost;
+    });
+
     const rewardColor = {
         common: "border-neutral-200 hover:border-neutral-300 bg-white",
         rare: "border-blue-200 hover:border-blue-400 bg-blue-50/30",
@@ -244,7 +252,7 @@ export function RewardStore({ onCreateClick }: { onCreateClick: () => void }) {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {storedRewards.map((reward) => {
+                    {sortedRewards.map((reward) => {
                         const canAfford = balance >= reward.cost;
 
                         return (
