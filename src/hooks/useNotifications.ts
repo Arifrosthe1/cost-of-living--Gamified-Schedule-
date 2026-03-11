@@ -24,19 +24,33 @@ export function useNotifications() {
         }
     };
 
-    const scheduleNotifications = () => {
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({
-                type: 'SCHEDULE_NOTIFICATIONS'
-            });
+    const scheduleNotifications = async () => {
+        if ('serviceWorker' in navigator) {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                if (registration.active) {
+                    registration.active.postMessage({
+                        type: 'SCHEDULE_NOTIFICATIONS'
+                    });
+                }
+            } catch (err) {
+                console.warn("Failed getting SW ready state", err);
+            }
         }
     };
 
-    const cancelEveningWarning = () => {
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller && permission === 'granted') {
-            navigator.serviceWorker.controller.postMessage({
-                type: 'CANCEL_EVENING_WARNING'
-            });
+    const cancelEveningWarning = async () => {
+        if ('serviceWorker' in navigator && permission === 'granted') {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                if (registration.active) {
+                    registration.active.postMessage({
+                        type: 'CANCEL_EVENING_WARNING'
+                    });
+                }
+            } catch (err) {
+                console.warn("Failed to cancel evening SW notification", err);
+            }
         }
     };
 

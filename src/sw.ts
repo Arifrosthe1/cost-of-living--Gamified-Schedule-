@@ -43,6 +43,13 @@ self.addEventListener('message', (event) => {
 });
 
 async function scheduleNotifications() {
+    // Immediate proof of life
+    await self.registration.showNotification("Notifications Enabled! 🔔", {
+        body: "You're all set! I'll remind you in the morning and evening to keep your streak alive.",
+        icon: '/pwa-192x192.png',
+        tag: 'system-ready'
+    });
+
     // If browser supports Notification Triggers API
     if ('showTrigger' in self.registration && 'TimestampTrigger' in self) {
         try {
