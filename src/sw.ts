@@ -35,20 +35,22 @@ function getTimeUntilNext(targetHourMs: number): number {
 
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SCHEDULE_NOTIFICATIONS') {
-        scheduleNotifications();
+        scheduleNotifications(event.data.isInitialSetup);
     }
     if (event.data && event.data.type === 'CANCEL_EVENING_WARNING') {
         cancelEveningWarning();
     }
 });
 
-async function scheduleNotifications() {
-    // Immediate proof of life
-    await self.registration.showNotification("Notifications Enabled! 🔔", {
-        body: "You're all set! I'll remind you in the morning and evening to keep your streak alive.",
-        icon: '/pwa-192x192.png',
-        tag: 'system-ready'
-    });
+async function scheduleNotifications(isInitialSetup: boolean = false) {
+    // Immediate proof of life ONLY on initial setup
+    if (isInitialSetup) {
+        await self.registration.showNotification("Notifications Enabled! 🔔", {
+            body: "You're all set! I'll remind you in the morning and evening to keep your streak alive.",
+            icon: '/pwa-192x192.png',
+            tag: 'system-ready'
+        });
+    }
 
     // If browser supports Notification Triggers API
     if ('showTrigger' in self.registration && 'TimestampTrigger' in self) {

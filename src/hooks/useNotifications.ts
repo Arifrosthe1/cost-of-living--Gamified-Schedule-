@@ -6,10 +6,11 @@ export function useNotifications() {
     );
 
     useEffect(() => {
-        if (permission === 'granted') {
-            scheduleNotifications();
+        if (Notification.permission === 'granted') {
+            scheduleNotifications(false);
         }
-    }, [permission]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const requestPermission = async () => {
         if (!('Notification' in window)) {
@@ -20,17 +21,18 @@ export function useNotifications() {
         const newPermission = await Notification.requestPermission();
         setPermission(newPermission);
         if (newPermission === 'granted') {
-            scheduleNotifications();
+            scheduleNotifications(true);
         }
     };
 
-    const scheduleNotifications = async () => {
+    const scheduleNotifications = async (isInitialSetup = false) => {
         if ('serviceWorker' in navigator) {
             try {
                 const registration = await navigator.serviceWorker.ready;
                 if (registration.active) {
                     registration.active.postMessage({
-                        type: 'SCHEDULE_NOTIFICATIONS'
+                        type: 'SCHEDULE_NOTIFICATIONS',
+                        isInitialSetup
                     });
                 }
             } catch (err) {
