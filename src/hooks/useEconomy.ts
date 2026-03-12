@@ -93,13 +93,13 @@ export function useEconomy() {
                     // Process each day sequentially with a while loop
                     let daysProcessed = 0;
                     while (differenceInDays(todayDate, loopDate) > 0) {
+                        const elapsedDayStr = format(loopDate, 'yyyy-MM-dd');
                         loopDate = new Date(loopDate.getTime() + 24 * 60 * 60 * 1000); // Step forward EXACTLY one day
                         daysProcessed++;
-                        const loopDateStr = format(loopDate, 'yyyy-MM-dd');
 
                         // --- To-Do Penalty Logic ---
-                        // Find any uncompleted To-Dos assigned to this precise day
-                        const missedTodos = await db.todos.where('targetDate').equals(loopDateStr).toArray();
+                        // Find any uncompleted To-Dos assigned to the day that just ended
+                        const missedTodos = await db.todos.where('targetDate').equals(elapsedDayStr).toArray();
                         for (const todo of missedTodos) {
                             currentBalance -= 15;
                             newTransactions.push({
