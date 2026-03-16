@@ -69,11 +69,21 @@ export function useEconomy() {
 
     // Background jobs
     useEffect(() => {
-        if (!user) return;
+        if (!user) {
+            setIsProcessing(false);
+            return;
+        }
+        
         let mounted = true;
         
         const runJobs = async () => {
             if (!mounted) return;
+            // Check if we already processed jobs this session to prevent infinite dependency loops
+            if (sessionStorage.getItem('jobs_run_for_' + user.uid)) {
+                if (mounted) setIsProcessing(false);
+                return;
+            }
+
             setIsProcessing(true);
             try {
                 const stateRef = doc(db, `users/${user.uid}/appState/economy`);
@@ -105,6 +115,7 @@ export function useEconomy() {
                 if (!state.lastProcessDate) {
                     batch.update(stateRef, { lastProcessDate: todayStr, streakCount: currentStreak });
                     await batch.commit();
+                    sessionStorage.setItem('jobs_run_for_' + user.uid, 'true');
                     setIsProcessing(false);
                     return;
                 }
@@ -182,6 +193,8 @@ export function useEconomy() {
                     await batch.commit();
                 }
 
+                // Mark jobs as run for this session
+                sessionStorage.setItem('jobs_run_for_' + user.uid, 'true');
             } catch (err) {
                 console.error("Failed background jobs", err);
             } finally {

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { migrateLocalDataToCloud } from '../lib/migrate';
 
 interface AuthContextType {
   user: User | null;
@@ -23,31 +24,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      
-      // Initialize core state if new user
-      if (currentUser) {
-        const userStateRef = doc(db, `users/${currentUser.uid}/appState/economy`);
-        try {
-          const userStateSnap = await getDoc(userStateRef);
-          if (!userStateSnap.exists()) {
-             // Provide a blank template
-             await setDoc(userStateRef, {
-                 balance: 0,
-                 streakCount: 0,
-                 savingsGoal: 100, // Or whatever default
-                 lastProcessDate: new Date().toISOString()
-             }, { merge: true });
-          }
-        } catch (e) {
-          console.warn("Could not fetch user appState. If offline, writes will be queued.", e);
-          // If offline and first time ever, we might not be able to read.
-          // In a rigorous app, we'd handle offline initialization more carefully.
-          // Note: Firestore handles offline writes fine, but offline reads of non-cached docs fail.
-        }
-      }
+      try {
+          setUser(currentUser);
+          
+          // Initialize core state & migrate if new user
+          if (currentUser) {
+            
+            // Trigger migration (if it hasn't happened yet)
+            await migrateLocalDataToCloud(currentUser.uid);
 
-      setLoading(false);
+            const userStateRef = doc(db, `users/${currentUser.uid}/appState/economy`);
+            try {
+              const userStateSnap = await getDoc(userStateRef);
+              if (!userStateSnap.exists()) {
+                 // Provide a blank template
+                 await setDoc(userStateRef, {
+                     balance: 0,
+                     streakCount: 0,
+                     savingsGoal: 100, // Or whatever default
+                     lastProcessDate: new Date().toISOString()
+                 }, { merge: true });
+              }
+            } catch (e) {
+              console.warn("Could not fetch user appState. If offline, writes will be queued.", e);
+            }
+          }
+      } catch (err) {
+          console.error("Auth Exception:", err);
+      } finally {
+          setLoading(false);
+      }
     });
 
     return unsubscribe;
