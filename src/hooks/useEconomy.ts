@@ -1,133 +1,164 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Transaction, type UserAction, type Reward, type Todo } from '../store/db';
-import { startOfDay, differenceInDays, format } from 'date-fns';
 import { useEffect, useState } from 'react';
+import { db } from '../lib/firebase';
+import { collection, doc, onSnapshot, query, orderBy, limit, writeBatch, getDoc, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
+import { startOfDay, differenceInDays, format } from 'date-fns';
+import type { Transaction, UserAction, Reward, Todo } from '../store/db';
+import { useAuth } from '../contexts/AuthContext';
 
-// RM5 daily tax
 const DAILY_TAX = 5;
-// 25% daily debt compound
 const DEBT_RATE = 0.25;
-// Bankruptcy fee
 const BANKRUPTCY_FEE = -100;
 
 export function useEconomy() {
+    const { user } = useAuth();
     const [isProcessing, setIsProcessing] = useState(true);
 
-    // Computed balance from all transactions
-    const balanceData = useLiveQuery(async () => {
-        const txs = await db.transactions.orderBy('timestamp').toArray();
-        let b = 0;
-        let minB = 0;
-        for (const tx of txs) {
-            b += tx.value;
-            if (b < minB) minB = b;
-        }
-        return { balance: b, lowestBalance: minB };
-    }, [], { balance: 0, lowestBalance: 0 });
+    const [balance, setBalance] = useState(0);
+    const [lowestBalance, setLowestBalance] = useState(0);
+    const [streakCount, setStreakCount] = useState(0);
+    const [savingsGoal, setSavingsGoal] = useState(0);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [customActions, setCustomActions] = useState<UserAction[]>([]);
+    const [storedRewards, setStoredRewards] = useState<Reward[]>([]);
+    const [todos, setTodos] = useState<Todo[]>([]);
 
-    const balance = balanceData ? balanceData.balance : 0;
-    const lowestBalance = balanceData ? balanceData.lowestBalance : 0;
-
-    const transactions = useLiveQuery(() => db.transactions.orderBy('timestamp').reverse().limit(50).toArray(), [], []);
-    const customActions = useLiveQuery(() => db.userActions.toArray(), [], []);
-    const storedRewards = useLiveQuery(() => db.rewards.toArray(), [], []);
-    const todos = useLiveQuery(() => db.todos.orderBy('targetDate').toArray(), [], []);
-
-    // Streaks & Goals
-    const streakCount = useLiveQuery(async () => {
-        const streakRecord = await db.appState.get('currentStreak');
-        return streakRecord ? parseInt(streakRecord.value, 10) : 0;
-    }, [], 0);
-
-    const savingsGoal = useLiveQuery(async () => {
-        const goalRecord = await db.appState.get('savingsGoal');
-        return goalRecord ? parseFloat(goalRecord.value) : 0;
-    }, [], 0);
-
-    let hasRunJobs = false;
-
-    // Run background jobs
     useEffect(() => {
-        if (hasRunJobs) return;
-        hasRunJobs = true;
+        if (!user) return;
+        const unsub = onSnapshot(doc(db, `users/${user.uid}/appState/economy`), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setBalance(data.balance || 0);
+                setLowestBalance(data.lowestBalance || 0);
+                setStreakCount(data.streakCount || 0);
+                setSavingsGoal(data.savingsGoal || 0);
+            }
+        });
+        return unsub;
+    }, [user]);
+
+    useEffect(() => {
+        if (!user) return;
+        
+        const txQ = query(collection(db, `users/${user.uid}/transactions`), orderBy('timestamp', 'desc'), limit(50));
+        const unsubTx = onSnapshot(txQ, (snap) => {
+            setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction)));
+        });
+
+        const actionsQ = query(collection(db, `users/${user.uid}/habits`));
+        const unsubActions = onSnapshot(actionsQ, (snap) => {
+            setCustomActions(snap.docs.map(d => ({ id: d.id, ...d.data() } as UserAction)));
+        });
+
+        const rewardsQ = query(collection(db, `users/${user.uid}/rewards`));
+        const unsubRewards = onSnapshot(rewardsQ, (snap) => {
+            setStoredRewards(snap.docs.map(d => ({ id: d.id, ...d.data() } as Reward)));
+        });
+
+        const todosQ = query(collection(db, `users/${user.uid}/todos`), orderBy('targetDate', 'asc'));
+        const unsubTodos = onSnapshot(todosQ, (snap) => {
+            setTodos(snap.docs.map(d => ({ id: d.id, ...d.data() } as Todo)));
+        });
+
+        return () => {
+            unsubTx();
+            unsubActions();
+            unsubRewards();
+            unsubTodos();
+        };
+    }, [user]);
+
+    // Background jobs
+    useEffect(() => {
+        if (!user) return;
+        let mounted = true;
+        
         const runJobs = async () => {
+            if (!mounted) return;
             setIsProcessing(true);
             try {
-                const todayStr = format(new Date(), 'yyyy-MM-dd');
-                const stateRecord = await db.appState.get('lastProcessDate');
-                const lastPositiveActStr = await db.appState.get('lastPositiveActionDate');
-
-                // Streak expiration logic
-                if (lastPositiveActStr) {
-                    const lastPosDate = new Date(lastPositiveActStr.value);
-                    const todayDate = startOfDay(new Date());
-                    const daysSincePos = differenceInDays(todayDate, startOfDay(lastPosDate));
-
-                    if (daysSincePos > 1) {
-                        // User missed a full calendar day of positive actions
-                        await db.appState.put({ key: 'currentStreak', value: '0' });
-                    }
-                }
-
-                // Edge Case Fix: If first launch, set today and give 0 balance, NO retroactive taxes
-                if (!stateRecord) {
-                    await db.appState.put({ key: 'lastProcessDate', value: todayStr });
+                const stateRef = doc(db, `users/${user.uid}/appState/economy`);
+                const snap = await getDoc(stateRef);
+                if (!snap.exists()) {
                     setIsProcessing(false);
                     return;
                 }
 
-                const lastDateStr = stateRecord.value;
+                const state = snap.data();
+                const todayStr = format(new Date(), 'yyyy-MM-dd');
+                
+                let currentStreak = state.streakCount || 0;
+                let currentBalance = state.balance || 0;
+                let minBalance = state.lowestBalance || 0;
+                
+                let needsUpdate = false;
+                const batch = writeBatch(db);
+
+                if (state.lastPositiveActionDate) {
+                    const lastPosDate = new Date(state.lastPositiveActionDate);
+                    const todayDate = startOfDay(new Date());
+                    if (differenceInDays(todayDate, startOfDay(lastPosDate)) > 1 && currentStreak > 0) {
+                        currentStreak = 0;
+                        needsUpdate = true;
+                    }
+                }
+
+                if (!state.lastProcessDate) {
+                    batch.update(stateRef, { lastProcessDate: todayStr, streakCount: currentStreak });
+                    await batch.commit();
+                    setIsProcessing(false);
+                    return;
+                }
+
+                const lastDateStr = state.lastProcessDate;
                 if (lastDateStr !== todayStr) {
+                    needsUpdate = true;
                     let loopDate = startOfDay(new Date(lastDateStr));
                     const todayDate = startOfDay(new Date());
-
-                    // Number of midnights passed
-                    // We step forward one day at a time in the loop.
-
-                    // Calculate accumulated current balance BEFORE jobs
-                    const allTxs = await db.transactions.toArray();
-                    let currentBalance = allTxs.reduce((acc, tx) => acc + tx.value, 0);
-
-                    let newTransactions: Transaction[] = [];
-
-                    // Process each day sequentially with a while loop
                     let daysProcessed = 0;
+
+                    const todosSnap = await getDocs(collection(db, `users/${user.uid}/todos`));
+                    const allTodos = todosSnap.docs.map(d => ({ id: d.id, ref: d.ref, ...(d.data() as Omit<Todo, 'id'>) }));
+
                     while (differenceInDays(todayDate, loopDate) > 0) {
                         const elapsedDayStr = format(loopDate, 'yyyy-MM-dd');
-                        loopDate = new Date(loopDate.getTime() + 24 * 60 * 60 * 1000); // Step forward EXACTLY one day
+                        loopDate = new Date(loopDate.getTime() + 24 * 60 * 60 * 1000);
                         daysProcessed++;
 
-                        // --- To-Do Penalty Logic ---
-                        // Find any uncompleted To-Dos assigned to the day that just ended
-                        const missedTodos = await db.todos.where('targetDate').equals(elapsedDayStr).toArray();
+                        const missedTodos = allTodos.filter((t: any) => t.targetDate === elapsedDayStr);
                         for (const todo of missedTodos) {
                             currentBalance -= 15;
-                            newTransactions.push({
-                                actionName: `Failed To-Do: ${todo.name}`,
+                            if (currentBalance < minBalance) minBalance = currentBalance;
+                            
+                            const txRef = doc(collection(db, `users/${user.uid}/transactions`));
+                            batch.set(txRef, {
+                                actionName: `Failed To-Do: ${(todo as Todo).name}`,
                                 value: -15,
-                                timestamp: Date.now() + daysProcessed * 2 - 1, // Order before tax/debt
+                                timestamp: Date.now() + daysProcessed * 2 - 1,
                                 type: 'user'
                             });
-                            await db.todos.delete(todo.id);
+                            batch.delete(todo.ref);
                         }
 
-                        // Step A: Apply Daily Tax
                         currentBalance -= DAILY_TAX;
-                        newTransactions.push({
+                        if (currentBalance < minBalance) minBalance = currentBalance;
+                        
+                        const taxRef = doc(collection(db, `users/${user.uid}/transactions`));
+                        batch.set(taxRef, {
                             actionName: 'Daily Tax',
                             value: -DAILY_TAX,
-                            timestamp: Date.now() + daysProcessed * 2, // sequential timestamps
+                            timestamp: Date.now() + daysProcessed * 2,
                             type: 'tax'
                         });
 
-                        // Step B: Apply Debt Trap if below zero AFTER tax
                         if (currentBalance < 0) {
                             const debtCharge = Math.abs(currentBalance) * DEBT_RATE;
-                            const roundedCharge = Math.round(debtCharge * 100) / 100; // Keep some precision for decimals up to 2 places
-
+                            const roundedCharge = Math.round(debtCharge * 100) / 100;
                             if (roundedCharge > 0) {
                                 currentBalance -= roundedCharge;
-                                newTransactions.push({
+                                if (currentBalance < minBalance) minBalance = currentBalance;
+                                
+                                const debtRef = doc(collection(db, `users/${user.uid}/transactions`));
+                                batch.set(debtRef, {
                                     actionName: 'Debt Compound (25%)',
                                     value: -roundedCharge,
                                     timestamp: Date.now() + daysProcessed * 2 + 1,
@@ -137,32 +168,41 @@ export function useEconomy() {
                         }
                     }
 
-                    if (newTransactions.length > 0) {
-                        await db.transactions.bulkAdd(newTransactions);
-                    }
-
-                    await db.appState.put({ key: 'lastProcessDate', value: todayStr });
+                    batch.update(stateRef, {
+                        lastProcessDate: todayStr,
+                        balance: currentBalance,
+                        lowestBalance: minBalance,
+                        streakCount: currentStreak
+                    });
+                } else if (needsUpdate) {
+                    batch.update(stateRef, { streakCount: currentStreak });
                 }
+
+                if (needsUpdate || lastDateStr !== todayStr) {
+                    await batch.commit();
+                }
+
             } catch (err) {
                 console.error("Failed background jobs", err);
             } finally {
-                setIsProcessing(false);
+                if (mounted) setIsProcessing(false);
             }
         };
 
         runJobs();
-    }, []); // Run once on app mount
+        return () => { mounted = false; };
+    }, [user]);
 
     const simulateDayPass = async () => {
+        if (!user) return;
         setIsProcessing(true);
         try {
-            const stateRecord = await db.appState.get('lastProcessDate');
-            if (stateRecord) {
-                // Rewind the last process date by 1 day so the effect or reload catches it
-                const lastDate = new Date(stateRecord.value);
+            const stateRef = doc(db, `users/${user.uid}/appState/economy`);
+            const snap = await getDoc(stateRef);
+            if (snap.exists() && snap.data().lastProcessDate) {
+                const lastDate = new Date(snap.data().lastProcessDate);
                 const previousDay = new Date(lastDate.getTime() - 24 * 60 * 60 * 1000);
-                await db.appState.put({ key: 'lastProcessDate', value: format(previousDay, 'yyyy-MM-dd') });
-                // We reload to trigger the exact same startup logic
+                await setDoc(stateRef, { lastProcessDate: format(previousDay, 'yyyy-MM-dd') }, { merge: true });
                 window.location.reload();
             }
         } finally {
@@ -171,36 +211,48 @@ export function useEconomy() {
     };
 
     const logAction = async (action: UserAction) => {
+        if (!user) return "";
+        
         let finalValue = action.value;
         const todayStr = format(new Date(), 'yyyy-MM-dd');
-
         let multiplier = 1;
 
-        if (action.value > 0) {
-            // Apply Streak Bonus logic
-            let currentStreakStr = await db.appState.get('currentStreak');
-            let streak = currentStreakStr ? parseInt(currentStreakStr.value, 10) : 0;
-            const lastPosStr = await db.appState.get('lastPositiveActionDate');
+        const stateRef = doc(db, `users/${user.uid}/appState/economy`);
+        const snap = await getDoc(stateRef);
+        let newStreak = 0;
+        let cBalance = balance;
+        let minBalance = lowestBalance;
 
-            if (lastPosStr && lastPosStr.value !== todayStr) {
-                // Determine if it was exactly yesterday. If missing a day, it resets (handled in background jobs).
-                streak += 1;
-            } else if (!lastPosStr) {
-                streak = 1;
-            }
+        if (snap.exists()) {
+            const state = snap.data();
+            cBalance = state.balance || 0;
+            minBalance = state.lowestBalance || 0;
 
-            await db.appState.put({ key: 'lastPositiveActionDate', value: todayStr });
-            await db.appState.put({ key: 'currentStreak', value: streak.toString() });
+            if (action.value > 0) {
+                newStreak = state.streakCount || 0;
+                const lastPosStr = state.lastPositiveActionDate;
 
-            if (streak >= 3) {
-                multiplier = 1.2;
-                finalValue = Math.round(finalValue * multiplier * 100) / 100;
+                if (lastPosStr && lastPosStr !== todayStr) {
+                    newStreak += 1;
+                } else if (!lastPosStr) {
+                    newStreak = 1;
+                }
+
+                if (newStreak >= 3) {
+                    multiplier = 1.2;
+                    finalValue = Math.round(finalValue * multiplier * 100) / 100;
+                }
             }
         }
 
         const txName = multiplier > 1 ? `${action.name} (Bonus x1.2)` : action.name;
+        
+        cBalance += finalValue;
+        if (cBalance < minBalance) minBalance = cBalance;
 
-        const id = await db.transactions.add({
+        const batch = writeBatch(db);
+        const txRef = doc(collection(db, `users/${user.uid}/transactions`));
+        batch.set(txRef, {
             actionId: action.id,
             actionName: txName,
             value: finalValue,
@@ -208,104 +260,186 @@ export function useEconomy() {
             type: 'user'
         });
 
-        return id as number;
+        const updates: any = {
+            balance: cBalance,
+            lowestBalance: minBalance
+        };
+        
+        if (action.value > 0) {
+            updates.lastPositiveActionDate = todayStr;
+            updates.streakCount = newStreak;
+        }
+
+        batch.update(stateRef, updates);
+        await batch.commit();
+
+        return txRef.id;
     };
 
     const addCustomAction = async (action: Omit<UserAction, "id">) => {
-        await db.userActions.add({
-            id: crypto.randomUUID(),
-            ...action
-        });
+        if (!user) return;
+        const ref = doc(collection(db, `users/${user.uid}/habits`));
+        await setDoc(ref, { id: ref.id, ...action });
     };
 
     const updateCustomAction = async (id: string, action: Partial<Omit<UserAction, "id">>) => {
-        await db.userActions.update(id, action);
+        if (!user) return;
+        await setDoc(doc(db, `users/${user.uid}/habits/${id}`), action, { merge: true });
     };
 
     const deleteCustomAction = async (id: string) => {
-        await db.userActions.delete(id);
+        if (!user) return;
+        await deleteDoc(doc(db, `users/${user.uid}/habits/${id}`));
     };
 
-    const undoTransaction = async (id: number) => {
-        await db.transactions.delete(id);
+    const undoTransaction = async (id: string) => {
+        if (!user) return;
+        const txRef = doc(db, `users/${user.uid}/transactions/${id}`);
+        const txSnap = await getDoc(txRef);
+        if (txSnap.exists()) {
+            const val = txSnap.data().value || 0;
+            const stateRef = doc(db, `users/${user.uid}/appState/economy`);
+            const stateSnap = await getDoc(stateRef);
+            let cBalance = balance;
+            if (stateSnap.exists()) {
+                cBalance = stateSnap.data().balance || 0;
+            }
+            cBalance -= val;
+            
+            const batch = writeBatch(db);
+            batch.delete(txRef);
+            batch.update(stateRef, { balance: cBalance });
+            await batch.commit();
+        }
     };
 
     const declareBankruptcy = async () => {
-        // 🚨 TOTAL RESET WIPE 🚨
-        await db.userActions.clear();
-        await db.todos.clear();
-        await db.rewards.clear();
-        await db.transactions.clear();
-        await db.appState.clear();
+        if (!user) return;
+        const batch = writeBatch(db);
+        
+        const habits = await getDocs(collection(db, `users/${user.uid}/habits`));
+        habits.docs.forEach(d => batch.delete(d.ref));
+        
+        const tds = await getDocs(collection(db, `users/${user.uid}/todos`));
+        tds.docs.forEach(d => batch.delete(d.ref));
 
-        // Seed the initial Permadeath penalty
-        await db.transactions.add({
+        const rwds = await getDocs(collection(db, `users/${user.uid}/rewards`));
+        rwds.docs.forEach(d => batch.delete(d.ref));
+
+        const txs = await getDocs(collection(db, `users/${user.uid}/transactions`));
+        txs.docs.forEach(d => batch.delete(d.ref));
+        
+        const txRef = doc(collection(db, `users/${user.uid}/transactions`));
+        batch.set(txRef, {
             actionName: 'Bankruptcy Penalty',
             value: BANKRUPTCY_FEE,
             timestamp: Date.now(),
             type: 'bankruptcy'
         });
 
-        const todayStr = format(new Date(), 'yyyy-MM-dd');
+        const stateRef = doc(db, `users/${user.uid}/appState/economy`);
+        batch.set(stateRef, {
+            balance: BANKRUPTCY_FEE,
+            lowestBalance: BANKRUPTCY_FEE,
+            streakCount: 0,
+            lastProcessDate: format(new Date(), 'yyyy-MM-dd')
+        }, { merge: true });
 
-        // Reset tracking states correctly
-        await db.appState.put({ key: 'currentStreak', value: '0' });
-        await db.appState.put({ key: 'lastProcessDate', value: todayStr });
+        await batch.commit();
     };
 
-    const setSavingsGoal = async (val: number) => {
-        await db.appState.put({ key: 'savingsGoal', value: val.toString() });
+    const setSavingsGoalAction = async (val: number) => {
+        if (!user) return;
+        await setDoc(doc(db, `users/${user.uid}/appState/economy`), {
+            savingsGoal: val
+        }, { merge: true });
     };
 
     const addReward = async (reward: Omit<Reward, "id">) => {
-        await db.rewards.add({
-            id: crypto.randomUUID(),
-            ...reward
-        });
+        if (!user) return;
+        const ref = doc(collection(db, `users/${user.uid}/rewards`));
+        await setDoc(ref, { id: ref.id, ...reward });
     };
 
     const deleteReward = async (id: string) => {
-        await db.rewards.delete(id);
+        if (!user) return;
+        await deleteDoc(doc(db, `users/${user.uid}/rewards/${id}`));
     };
 
     const updateReward = async (id: string, reward: Partial<Omit<Reward, "id">>) => {
-        await db.rewards.update(id, reward);
+        if (!user) return;
+        await setDoc(doc(db, `users/${user.uid}/rewards/${id}`), reward, { merge: true });
     };
 
     const purchaseReward = async (reward: Reward) => {
-        if (balance < reward.cost) return false;
+        if (!user || balance < reward.cost) return false;
 
-        await db.transactions.add({
+        const stateRef = doc(db, `users/${user.uid}/appState/economy`);
+        const stateSnap = await getDoc(stateRef);
+        let cBalance = balance;
+        let minBalance = lowestBalance;
+        
+        if (stateSnap.exists()) {
+            cBalance = stateSnap.data().balance || 0;
+            minBalance = stateSnap.data().lowestBalance || 0;
+        }
+
+        cBalance -= reward.cost;
+        if (cBalance < minBalance) minBalance = cBalance;
+
+        const batch = writeBatch(db);
+        const txRef = doc(collection(db, `users/${user.uid}/transactions`));
+        batch.set(txRef, {
             actionId: reward.id,
             actionName: `Reward: ${reward.name}`,
-            value: -reward.cost, // Deducting cost
+            value: -reward.cost,
             timestamp: Date.now(),
-            type: 'user' // Treat as user spending
+            type: 'user'
         });
 
+        batch.update(stateRef, { balance: cBalance, lowestBalance: minBalance });
+        await batch.commit();
         return true;
     };
 
     const addTodo = async (todo: Omit<Todo, "id" | "createdAt">) => {
-        await db.todos.add({
-            id: crypto.randomUUID(),
+        if (!user) return;
+        const ref = doc(collection(db, `users/${user.uid}/todos`));
+        await setDoc(ref, {
+            id: ref.id,
             createdAt: Date.now(),
             ...todo
         });
     };
 
     const completeTodo = async (todo: Todo) => {
-        await db.transactions.add({
+        if (!user) return;
+
+        const stateRef = doc(db, `users/${user.uid}/appState/economy`);
+        const stateSnap = await getDoc(stateRef);
+        let cBalance = balance;
+        if (stateSnap.exists()) {
+            cBalance = stateSnap.data().balance || 0;
+        }
+        cBalance += 15;
+
+        const batch = writeBatch(db);
+        const txRef = doc(collection(db, `users/${user.uid}/transactions`));
+        batch.set(txRef, {
             actionName: `Completed: ${todo.name}`,
             value: 15,
             timestamp: Date.now(),
             type: 'user'
         });
-        await db.todos.delete(todo.id);
+
+        batch.update(stateRef, { balance: cBalance });
+        batch.delete(doc(db, `users/${user.uid}/todos/${todo.id}`));
+        await batch.commit();
     };
 
     const deleteTodo = async (id: string) => {
-        await db.todos.delete(id);
+        if (!user) return;
+        await deleteDoc(doc(db, `users/${user.uid}/todos/${id}`));
     };
 
     return {
@@ -318,7 +452,7 @@ export function useEconomy() {
         streakCount,
         savingsGoal,
         storedRewards,
-        setSavingsGoal,
+        setSavingsGoal: setSavingsGoalAction,
         logAction,
         addCustomAction,
         updateCustomAction,

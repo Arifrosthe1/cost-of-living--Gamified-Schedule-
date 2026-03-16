@@ -12,6 +12,9 @@ import { cn } from './utils';
 import { ProgressBar } from './components/ProgressBar';
 import { RewardStore } from './components/RewardStore';
 import { CreateRewardForm } from './components/CreateRewardForm';
+import { useAuth } from './contexts/AuthContext';
+import { AuthScreen } from './components/AuthScreen';
+import { LogOut } from 'lucide-react';
 
 type TabView = 'dashboard' | 'rewards';
 
@@ -21,13 +24,18 @@ function App() {
   const [showCreateRewardForm, setShowCreateRewardForm] = useState(false);
   const { isProcessing, balance, streakCount, savingsGoal } = useEconomy();
   const { permission, requestPermission } = useNotifications();
+  const { user, loading: authLoading, signOut } = useAuth();
 
-  if (isProcessing) {
+  if (authLoading || isProcessing) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center text-neutral-400">
         <Activity className="animate-pulse" size={32} />
       </div>
     );
+  }
+
+  if (!user) {
+    return <AuthScreen />;
   }
 
   return (
@@ -56,6 +64,14 @@ function App() {
               <span>{streakCount}</span>
             </div>
           )}
+          
+          <button
+            onClick={signOut}
+            className="p-1.5 ml-2 text-neutral-400 hover:text-red-600 bg-neutral-50 hover:bg-red-50 rounded-full transition-colors active:scale-95 animate-in fade-in"
+            title="Sign Out"
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       </header>
 

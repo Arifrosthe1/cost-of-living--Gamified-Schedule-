@@ -238,7 +238,7 @@ export function ActionList({ onCreateClick }: { onCreateClick: () => void }) {
     const { customActions, logAction, deleteCustomAction, undoTransaction } = useEconomy();
     const [editingAction, setEditingAction] = useState<UserAction | null>(null);
     const [swipedActionId, setSwipedActionId] = useState<string | null>(null);
-    const [toast, setToast] = useState<{ id: number, message: string } | null>(null);
+    const [toast, setToast] = useState<{ id: string, message: string } | null>(null);
 
     useEffect(() => {
         if (toast) {
@@ -249,7 +249,7 @@ export function ActionList({ onCreateClick }: { onCreateClick: () => void }) {
 
     const handleLog = async (action: UserAction) => {
         const txId = await logAction(action);
-        setToast({ id: txId as number, message: `Logged ${action.name}` });
+        setToast({ id: txId as string, message: `Logged ${action.name}` });
     };
 
     const sortHabits = (a: UserAction, b: UserAction) => {
