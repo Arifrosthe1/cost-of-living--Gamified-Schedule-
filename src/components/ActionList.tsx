@@ -1,4 +1,4 @@
-import { Plus, Trash2, Edit2, Zap, Star } from 'lucide-react';
+import { Plus, Trash2, Edit2, Zap, Star, Dices } from 'lucide-react';
 import { useEconomy } from '../hooks/useEconomy';
 import { cn } from '../utils';
 import { useState, useRef, useEffect } from 'react';
@@ -11,14 +11,16 @@ function ActionItem({
     onEdit,
     onDelete,
     isRevealed,
-    onReveal
+    onReveal,
+    isBoosted
 }: {
     action: UserAction,
     onLog: (a: UserAction) => void,
     onEdit: () => void,
     onDelete: () => void,
     isRevealed: boolean,
-    onReveal: (id: string | null) => void
+    onReveal: (id: string | null) => void,
+    isBoosted?: boolean
 }) {
     const startX = useRef<number | null>(null);
     const startY = useRef<number | null>(null);
@@ -138,7 +140,10 @@ function ActionItem({
                 className={cn(
                     "relative bg-white border rounded-2xl cursor-pointer transition-all w-full box-border",
                     action.questType === 'side'
-                        ? "flex flex-col justify-between items-start min-h-[104px] p-4 shadow-none border-neutral-100 hover:bg-neutral-50 active:bg-neutral-100"
+                        ? cn("flex flex-col justify-between items-start min-h-[104px] p-4 shadow-none",
+                             isBoosted 
+                                 ? "border-2 border-orange-500/50 bg-orange-50 hover:bg-orange-100 shadow-[0_0_15px_rgba(249,115,22,0.2)]" 
+                                 : "border-neutral-100 hover:bg-neutral-50 active:bg-neutral-100")
                         : "flex items-center justify-between p-4 shadow-sm border-neutral-200 hover:border-neutral-300 hover:shadow-md hover:bg-neutral-50 active:bg-neutral-100",
                     startX.current === null ? "duration-200 ease-out" : "",
                     isClicked ? "scale-[0.96] shadow-inner" : "active:scale-[0.98]"
@@ -149,11 +154,15 @@ function ActionItem({
                     <>
                         {/* Top Section */}
                         <div className="w-full flex justify-between items-start mb-2">
-                            <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 group-hover:bg-white transition-colors">
-                                <Zap size={14} className="text-blue-500 fill-blue-500/20" />
+                            <div className={cn("flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full border transition-colors",
+                                isBoosted ? "bg-orange-100 border-orange-200 group-hover:bg-orange-200" : "bg-neutral-50 border-neutral-100 group-hover:bg-white")}>
+                                {isBoosted ? 
+                                    <Dices size={14} className="text-orange-500" /> :
+                                    <Zap size={14} className="text-blue-500 fill-blue-500/20" />
+                                }
                             </div>
                             <div className="font-bold tabular-nums tracking-tight text-positive text-sm mt-1">
-                                +{Math.abs(action.value)}
+                                +{Math.abs(isBoosted ? action.value * 2 : action.value)}
                             </div>
                         </div>
                         {/* Bottom Section */}
@@ -196,7 +205,8 @@ function QuestGroup({
     deleteCustomAction,
     setEditingAction,
     swipedActionId,
-    setSwipedActionId
+    setSwipedActionId,
+    boostedActionId
 }: {
     title: string,
     actions: UserAction[],
@@ -205,7 +215,8 @@ function QuestGroup({
     deleteCustomAction: (id: string) => void,
     setEditingAction: (a: UserAction) => void,
     swipedActionId: string | null,
-    setSwipedActionId: (id: string | null) => void
+    setSwipedActionId: (id: string | null) => void,
+    boostedActionId?: string | null
 }) {
     if (actions.length === 0) return null;
 
@@ -226,6 +237,7 @@ function QuestGroup({
                             onDelete={() => deleteCustomAction(action.id)}
                             isRevealed={swipedActionId === action.id}
                             onReveal={setSwipedActionId}
+                            isBoosted={boostedActionId === action.id}
                         />
                     </div>
                 ))}
@@ -240,6 +252,74 @@ export function ActionList({ onCreateClick }: { onCreateClick: () => void }) {
     const [swipedActionId, setSwipedActionId] = useState<string | null>(null);
     const [toast, setToast] = useState<{ id: string, message: string } | null>(null);
 
+    const [powerups, setPowerups] = useState<{ doubleTroubleLeft: number, bountyHunterActive: boolean, mainQuestOverdriveActive: boolean }>(() => {
+        try {
+            const saved = localStorage.getItem('cost_of_living_powerups');
+            return saved ? JSON.parse(saved) : { doubleTroubleLeft: 0, bountyHunterActive: false, mainQuestOverdriveActive: false };
+        } catch(e) {}
+        return { doubleTroubleLeft: 0, bountyHunterActive: false, mainQuestOverdriveActive: false };
+    });
+
+    useEffect(() => {
+        const handlePowerupsUpdate = () => {
+            try {
+                const saved = localStorage.getItem('cost_of_living_powerups');
+                if (saved) setPowerups(JSON.parse(saved));
+            } catch(e) {}
+        };
+        window.addEventListener('powerupsUpdated', handlePowerupsUpdate);
+        return () => window.removeEventListener('powerupsUpdated', handlePowerupsUpdate);
+    }, []);
+
+    const [diceCooldown, setDiceCooldown] = useState<number | null>(() => {
+        try {
+            const saved = localStorage.getItem('cost_of_living_dice_cooldown');
+            if (saved) {
+                const parsed = parseInt(saved);
+                if (Date.now() < parsed) return parsed;
+                localStorage.removeItem('cost_of_living_dice_cooldown');
+            }
+        } catch(e) {}
+        return null;
+    });
+
+    const [diceRoll, setDiceRoll] = useState<{actionId: string, expiresAt: number} | null>(() => {
+        try {
+            const saved = localStorage.getItem('cost_of_living_dice_roll');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Date.now() < parsed.expiresAt) return parsed;
+                localStorage.removeItem('cost_of_living_dice_roll');
+            }
+        } catch(e) {}
+        return null;
+    });
+
+    useEffect(() => {
+        if (!diceRoll) return;
+        const interval = setInterval(() => {
+            if (Date.now() >= diceRoll.expiresAt) {
+                setDiceRoll(null);
+                localStorage.removeItem('cost_of_living_dice_roll');
+                const cd = Date.now() + 2 * 60 * 60 * 1000;
+                setDiceCooldown(cd);
+                localStorage.setItem('cost_of_living_dice_cooldown', cd.toString());
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [diceRoll]);
+
+    useEffect(() => {
+        if (!diceCooldown) return;
+        const interval = setInterval(() => {
+            if (Date.now() >= diceCooldown) {
+                setDiceCooldown(null);
+                localStorage.removeItem('cost_of_living_dice_cooldown');
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [diceCooldown]);
+
     useEffect(() => {
         if (toast) {
             const timer = setTimeout(() => setToast(null), 5000);
@@ -248,8 +328,75 @@ export function ActionList({ onCreateClick }: { onCreateClick: () => void }) {
     }, [toast]);
 
     const handleLog = async (action: UserAction) => {
-        const txId = await logAction(action);
-        setToast({ id: txId as string, message: `Logged ${action.name}` });
+        let actionToLog = { ...action };
+        let notes: string[] = [];
+        
+        let p = { ...powerups };
+        let powerupsChanged = false;
+
+        // Double Trouble
+        if (p.doubleTroubleLeft > 0) {
+            actionToLog.value *= 2;
+            notes.push('Double Trouble 2x');
+            p.doubleTroubleLeft -= 1;
+            powerupsChanged = true;
+        }
+
+        // Bounty Hunter
+        if (p.bountyHunterActive && actionToLog.questType === 'side') {
+            actionToLog.value += 50;
+            notes.push('Bounty Hunter +RM50');
+            p.bountyHunterActive = false;
+            powerupsChanged = true;
+        }
+
+        // Main Overdrive
+        if (p.mainQuestOverdriveActive && actionToLog.questType !== 'side') {
+            actionToLog.value *= 2;
+            notes.push('Main Overdrive 2x');
+            p.mainQuestOverdriveActive = false;
+            powerupsChanged = true;
+        }
+
+        if (powerupsChanged) {
+            setPowerups(p);
+            localStorage.setItem('cost_of_living_powerups', JSON.stringify(p));
+        }
+
+        const isBoosted = diceRoll && diceRoll.actionId === action.id;
+        if (isBoosted) {
+            actionToLog.value *= 2;
+            notes.push('Destiny Doubled');
+            setDiceRoll(null);
+            localStorage.removeItem('cost_of_living_dice_roll');
+            
+            const cd = Date.now() + 2 * 60 * 60 * 1000;
+            setDiceCooldown(cd);
+            localStorage.setItem('cost_of_living_dice_cooldown', cd.toString());
+        }
+
+        if (notes.length > 0) {
+            actionToLog.name = `${actionToLog.name} (${notes.join(', ')})`;
+        }
+
+        const txId = await logAction(actionToLog);
+        setToast({ id: txId as string, message: `Logged ${action.name}${notes.length > 0 ? ' ✨' : ''}` });
+    };
+
+    const handleRollDice = () => {
+        if (diceRoll || diceCooldown) return;
+
+        const sideQuests = customActions?.filter(a => a.value > 0 && a.questType === 'side');
+        if (!sideQuests || sideQuests.length === 0) return;
+        
+        const randomQuest = sideQuests[Math.floor(Math.random() * sideQuests.length)];
+        const newRoll = {
+            actionId: randomQuest.id,
+            expiresAt: Date.now() + 15 * 60 * 1000
+        };
+        setDiceRoll(newRoll);
+        localStorage.setItem('cost_of_living_dice_roll', JSON.stringify(newRoll));
+        if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
     };
 
     const sortHabits = (a: UserAction, b: UserAction) => {
@@ -288,7 +435,64 @@ export function ActionList({ onCreateClick }: { onCreateClick: () => void }) {
                     </button>
                 </div>
             ) : (
-                <div className="space-y-2">
+                <div className="space-y-4">
+                    {/* Active Power-Ups */}
+                    {(powerups.doubleTroubleLeft > 0 || powerups.bountyHunterActive || powerups.mainQuestOverdriveActive) && (
+                        <div className="flex flex-wrap gap-2 mb-2 animate-in fade-in slide-in-from-top-2">
+                            {powerups.doubleTroubleLeft > 0 && (
+                                <div className="bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                                    <Zap size={14} className="fill-indigo-500" />
+                                    Double Trouble ({powerups.doubleTroubleLeft} left)
+                                </div>
+                            )}
+                            {powerups.bountyHunterActive && (
+                                <div className="bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                                    <Star size={14} className="fill-amber-500" />
+                                    Bounty Hunter (+RM50)
+                                </div>
+                            )}
+                            {powerups.mainQuestOverdriveActive && (
+                                <div className="bg-orange-50 border border-orange-200 text-orange-700 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                                    <Star size={14} className="fill-orange-500" />
+                                    Main Overdrive (2x)
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {sideQuests.length > 0 && (
+                        <div className="bg-neutral-900 rounded-2xl p-4 flex items-center justify-between shadow-sm border border-neutral-800">
+                            <div>
+                                <h4 className="text-white font-bold tracking-tight text-sm flex items-center gap-2 mb-0.5">
+                                    <Dices size={16} className={cn(diceRoll ? "text-orange-500 animate-pulse" : "text-white/80")} /> 
+                                    Dice of Destiny
+                                </h4>
+                                <p className="text-white/60 text-[10px] uppercase tracking-widest font-semibold flex items-center gap-1">
+                                    {diceRoll ? (
+                                        <span className="text-orange-400">Boost Active: {Math.max(0, Math.ceil((diceRoll.expiresAt - Date.now()) / 60000))}m left</span>
+                                    ) : diceCooldown ? (
+                                        <span className="text-neutral-500">Available in {Math.max(0, Math.ceil((diceCooldown - Date.now()) / 60000))}m</span>
+                                    ) : (
+                                        "Roll for 15 Min 2x Multiplier"
+                                    )}
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleRollDice}
+                                disabled={!!diceRoll || !!diceCooldown}
+                                className={cn(
+                                    "px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm",
+                                    diceRoll 
+                                        ? "bg-neutral-800 text-white/30 cursor-not-allowed"
+                                        : diceCooldown
+                                            ? "bg-neutral-800 text-neutral-500 cursor-not-allowed"
+                                            : "bg-white text-neutral-900 hover:bg-neutral-100 active:scale-95"
+                                )}
+                            >
+                                {diceRoll ? "Locked" : diceCooldown ? "Cooldown" : "Roll Dice"}
+                            </button>
+                        </div>
+                    )}
+
                     <QuestGroup
                         title="Side Quests"
                         actions={sideQuests}
@@ -298,6 +502,7 @@ export function ActionList({ onCreateClick }: { onCreateClick: () => void }) {
                         setEditingAction={setEditingAction}
                         swipedActionId={swipedActionId}
                         setSwipedActionId={setSwipedActionId}
+                        boostedActionId={diceRoll?.actionId}
                     />
                     <QuestGroup
                         title="Main Quests"

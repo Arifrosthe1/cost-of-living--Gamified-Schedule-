@@ -1,4 +1,4 @@
-import { Plus, Sparkles, Trash2, AlertCircle, Edit2, Wallet } from 'lucide-react';
+import { Plus, Sparkles, Trash2, AlertCircle, Edit2, Wallet, Package } from 'lucide-react';
 import { useEconomy } from '../hooks/useEconomy';
 import { cn } from '../utils';
 import { useState, useRef, useEffect } from 'react';
@@ -156,6 +156,69 @@ export function RewardStore({ onCreateClick }: { onCreateClick: () => void }) {
     const [swipedActionId, setSwipedActionId] = useState<string | null>(null);
     const [toast, setToast] = useState<{ id: string, message: string } | null>(null);
 
+    const [isRollingMystery, setIsRollingMystery] = useState(false);
+    const [mysteryResult, setMysteryResult] = useState<{name: string, type: 'powerup'|'common'} | null>(null);
+
+    const MYSTERY_POWERUPS = [
+        { id: 'double_trouble', name: "3x Double Trouble", desc: "Next 3 habits give 2X RM" },
+        { id: 'bounty_hunter', name: "Bounty Hunter Bonus", desc: "Next Side Quest gives +RM50" },
+        { id: 'main_overdrive', name: "Main Quest Overdrive", desc: "Next Main Quest gives 2X RM" }
+    ];
+
+    const handleBuyMysteryBox = async () => {
+        if (balance < 99 || isRollingMystery) return;
+        
+        const success = await purchaseReward({
+            id: 'mystery-box-' + Date.now(),
+            name: 'Safe Mystery Box',
+            cost: 99,
+            tier: 'mystery' as any
+        } as Reward);
+
+        if (!success) return;
+
+        setIsRollingMystery(true);
+        navigator.vibrate?.([50, 100, 50, 100, 50]);
+
+        const commonRewards = storedRewards.filter(r => r.tier === 'common');
+        let prize: {name: string, type: 'powerup'|'common'};
+        
+        if (commonRewards.length > 0 && Math.random() < 0.5) {
+            const randomCommon = commonRewards[Math.floor(Math.random() * commonRewards.length)];
+            prize = { name: randomCommon.name, type: 'common' };
+        } else {
+            const randomPowerup = MYSTERY_POWERUPS[Math.floor(Math.random() * MYSTERY_POWERUPS.length)];
+            prize = { name: randomPowerup.name, type: 'powerup', id: randomPowerup.id } as any;
+        }
+
+        setTimeout(async () => {
+            setIsRollingMystery(false);
+            setMysteryResult(prize);
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);
+            
+            if (prize.type === 'powerup') {
+                try {
+                    const saved = localStorage.getItem('cost_of_living_powerups');
+                    let p = saved ? JSON.parse(saved) : { doubleTroubleLeft: 0, bountyHunterActive: false, mainQuestOverdriveActive: false };
+                    
+                    if ((prize as any).id === 'double_trouble') p.doubleTroubleLeft += 3;
+                    if ((prize as any).id === 'bounty_hunter') p.bountyHunterActive = true;
+                    if ((prize as any).id === 'main_overdrive') p.mainQuestOverdriveActive = true;
+                    
+                    localStorage.setItem('cost_of_living_powerups', JSON.stringify(p));
+                    window.dispatchEvent(new Event('powerupsUpdated'));
+                } catch(e) {}
+            }
+
+            await logAction({
+                id: 'prize-' + Date.now(),
+                name: `Won Prize: ${prize.name}`,
+                value: 0,
+                questType: 'side'
+            } as UserAction);
+        }, 2200);
+    };
+
     useEffect(() => {
         if (toast) {
             const timer = setTimeout(() => setToast(null), 5000);
@@ -230,6 +293,41 @@ export function RewardStore({ onCreateClick }: { onCreateClick: () => void }) {
                     </div>
                 </div>
             )}
+
+            <div className="mb-10">
+                <h4 className="text-xs font-bold tracking-[0.2em] text-neutral-400 uppercase mb-3 px-2 flex items-center gap-2">
+                    <div className="h-px w-4 bg-neutral-200" />
+                    Unpredictability
+                    <div className="h-px flex-1 bg-neutral-200" />
+                </h4>
+                <button 
+                    onClick={handleBuyMysteryBox}
+                    disabled={balance < 99 || isRollingMystery}
+                    className={cn(
+                        "relative w-full flex flex-col sm:flex-row items-center sm:justify-between p-5 bg-white border rounded-3xl shadow-sm transition-all text-left group",
+                        balance >= 99 
+                            ? "hover:border-neutral-300 hover:shadow-md border-neutral-200 active:bg-neutral-50 active:scale-[0.98]"
+                            : "opacity-60 border-neutral-200 grayscale-[0.2]"
+                    )}
+                >
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                        <div className={cn("w-12 h-12 flex-shrink-0 rounded-2xl flex items-center justify-center border transition-colors", 
+                            balance >= 99 ? "bg-neutral-900 border-neutral-800 text-white" : "bg-neutral-100 border-neutral-200 text-neutral-400")}>
+                            <Package size={20} />
+                        </div>
+                        <div className="flex flex-col flex-1">
+                            <h3 className="font-bold text-lg text-neutral-900 tracking-tight leading-tight mb-0.5">Mystery Box</h3>
+                            <p className="text-neutral-500 text-xs font-medium">Common Reward or Random Power-Up</p>
+                        </div>
+                        <div className="sm:hidden flex flex-col items-end pl-2">
+                            <span className={cn("text-base font-bold tabular-nums tracking-tight", balance >= 99 ? "text-neutral-900" : "text-red-500")}>RM99</span>
+                        </div>
+                    </div>
+                    <div className="hidden sm:flex flex-col items-end pl-4 flex-shrink-0">
+                        <span className={cn("text-xl font-bold tabular-nums tracking-tight", balance >= 99 ? "text-neutral-900" : "text-red-500")}>RM99</span>
+                    </div>
+                </button>
+            </div>
 
             <div className="flex items-center justify-between mb-6">
                 <h3 className="text-sm font-medium tracking-widest text-neutral-400 uppercase">Purchasable Rewards</h3>
@@ -342,6 +440,46 @@ export function RewardStore({ onCreateClick }: { onCreateClick: () => void }) {
                     >
                         Undo
                     </button>
+                </div>
+            )}
+
+            {/* Mystery Modals */}
+            {(isRollingMystery || mysteryResult) && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-neutral-900/60 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[2rem] w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col items-center justify-center min-h-[320px] p-8 relative border border-neutral-100">
+                        {isRollingMystery ? (
+                            <div className="flex flex-col items-center animate-in fade-in duration-300">
+                                <div className="relative w-20 h-20 mb-6 flex items-center justify-center">
+                                    <div className="absolute inset-0 bg-neutral-100 rounded-full animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]" />
+                                    <div className="relative bg-neutral-900 text-white w-16 h-16 rounded-[1.2rem] flex items-center justify-center rotate-3 transition-transform">
+                                        <Package size={28} />
+                                    </div>
+                                </div>
+                                <h3 className="text-xl font-bold text-neutral-900 tracking-tight mb-2">Unboxing...</h3>
+                                <div className="h-1 w-12 bg-neutral-200 rounded-full overflow-hidden">
+                                     <div className="h-full bg-neutral-900 rounded-full animate-[ping_1s_infinite]" style={{width: '50%'}}></div>
+                                </div>
+                            </div>
+                        ) : mysteryResult ? (
+                            <div className="flex flex-col items-center text-center animate-in slide-in-from-bottom-4 zoom-in-95 fade-in duration-400 w-full">
+                                <div className="w-16 h-16 bg-neutral-50 border-2 border-neutral-200 rounded-[1.2rem] flex items-center justify-center mb-6 -rotate-6 shadow-sm">
+                                    <Sparkles className="text-neutral-900" size={28} />
+                                </div>
+                                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400 mb-3 block">
+                                    {mysteryResult.type === 'common' ? 'Common Indulgence' : 'Digital Power-Up'}
+                                </span>
+                                <h3 className="text-2xl font-black text-neutral-900 tracking-tight leading-tight mb-8">
+                                    {mysteryResult.name}
+                                </h3>
+                                <button
+                                    onClick={() => setMysteryResult(null)}
+                                    className="w-full py-3.5 bg-neutral-900 text-white rounded-xl font-medium tracking-wide hover:bg-neutral-800 active:scale-[0.98] transition-all"
+                                >
+                                    Claim Prize
+                                </button>
+                            </div>
+                        ) : null}
+                    </div>
                 </div>
             )}
         </div>
