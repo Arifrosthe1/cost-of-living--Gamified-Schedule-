@@ -1,0 +1,48 @@
+name: Push Notifications
+
+on:
+  schedule:
+    # 00:00 UTC is 8:00 AM MYT (Morning Run)
+    - cron: '0 0 * * *'
+    # 12:00 UTC is 8:00 PM MYT (Evening Hazard Run)
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+    inputs:
+      tod:
+        description: 'Time of day (morning or evening)'
+        required: true
+        default: 'morning'
+
+jobs:
+  send-notifications:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install firebase-admin date-fns
+        
+      - name: Determine Flag
+        id: determine_flag
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            HOUR=$(date -u +"%H")
+            if [ "$HOUR" = "00" ]; then
+              echo "FLAG=--morning" >> $GITHUB_ENV
+            else
+              echo "FLAG=--evening" >> $GITHUB_ENV
+            fi
+          else
+            echo "FLAG=--${{ github.event.inputs.tod }}" >> $GITHUB_ENV
+          fi
+
+      - name: Run Push Notification Script
+        env:
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+        run: node scripts/send-notifications.js $FLAG

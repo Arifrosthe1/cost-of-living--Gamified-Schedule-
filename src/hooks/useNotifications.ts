@@ -1,16 +1,60 @@
 import { useState, useEffect } from 'react';
+import { getToken } from 'firebase/messaging';
+import { messaging, db } from '../lib/firebase';
+import { doc, arrayUnion, setDoc } from 'firebase/firestore';
+import { useAuth } from '../contexts/AuthContext';
 
 export function useNotifications() {
     const [permission, setPermission] = useState<NotificationPermission>(
         'Notification' in window ? Notification.permission : 'default'
     );
+    const { user } = useAuth();
 
     useEffect(() => {
         if (Notification.permission === 'granted') {
-            scheduleNotifications(false);
+            registerToken(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [user]);
+
+    const registerToken = async (isInitialSetup = false) => {
+        if (!user) return;
+        
+        try {
+            // Get the VAPID key from environment variables
+            const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+            
+            if (!vapidKey) {
+                console.warn("VITE_FIREBASE_VAPID_KEY is missing. Cannot register for push notifications.");
+                return;
+            }
+
+            const currentToken = await getToken(messaging, { 
+                vapidKey: vapidKey 
+            });
+
+            if (currentToken) {
+                // Save token to user's document in Firestore
+                const userRef = doc(db, `users/${user.uid}`);
+                await setDoc(userRef, {
+                    fcmTokens: arrayUnion(currentToken)
+                }, { merge: true });
+
+                if (isInitialSetup && 'serviceWorker' in navigator) {
+                    const registration = await navigator.serviceWorker.ready;
+                    if (registration.active) {
+                        registration.active.postMessage({
+                            type: 'INITIAL_SETUP_NOTIFICATION'
+                        });
+                    }
+                }
+            } else {
+                console.log('No registration token available. Request permission to generate one.');
+            }
+        } catch (err) {
+            console.error('An error occurred while retrieving token. ', err);
+        }
+    };
 
     const requestPermission = async () => {
         if (!('Notification' in window)) {
@@ -21,40 +65,13 @@ export function useNotifications() {
         const newPermission = await Notification.requestPermission();
         setPermission(newPermission);
         if (newPermission === 'granted') {
-            scheduleNotifications(true);
+            registerToken(true);
         }
     };
 
-    const scheduleNotifications = async (isInitialSetup = false) => {
-        if ('serviceWorker' in navigator) {
-            try {
-                const registration = await navigator.serviceWorker.ready;
-                if (registration.active) {
-                    registration.active.postMessage({
-                        type: 'SCHEDULE_NOTIFICATIONS',
-                        isInitialSetup
-                    });
-                }
-            } catch (err) {
-                console.warn("Failed getting SW ready state", err);
-            }
-        }
-    };
-
-    const cancelEveningWarning = async () => {
-        if ('serviceWorker' in navigator && permission === 'granted') {
-            try {
-                const registration = await navigator.serviceWorker.ready;
-                if (registration.active) {
-                    registration.active.postMessage({
-                        type: 'CANCEL_EVENING_WARNING'
-                    });
-                }
-            } catch (err) {
-                console.warn("Failed to cancel evening SW notification", err);
-            }
-        }
-    };
+    // Keep this stubbed out so other components don't break, 
+    // but it's no longer needed since the server handles hazard logic.
+    const cancelEveningWarning = async () => {};
 
     return {
         permission,
