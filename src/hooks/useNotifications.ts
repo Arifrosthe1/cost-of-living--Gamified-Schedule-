@@ -29,8 +29,14 @@ export function useNotifications() {
                 return;
             }
 
+            let swRegistration = null;
+            if ('serviceWorker' in navigator) {
+                swRegistration = await navigator.serviceWorker.ready;
+            }
+
             const currentToken = await getToken(messaging, { 
-                vapidKey: vapidKey 
+                vapidKey: vapidKey,
+                serviceWorkerRegistration: swRegistration || undefined
             });
 
             if (currentToken) {
