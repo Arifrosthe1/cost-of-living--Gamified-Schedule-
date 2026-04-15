@@ -41,3 +41,23 @@ self.addEventListener('push', (event) => {
         })
     );
 });
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    // Standard logic to open the app if it isn't already open
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            // If there's an open tab/window, focus it
+            for (const client of clientList) {
+                if (client.url === '/' && 'focus' in client) {
+                    return (client as any).focus();
+                }
+            }
+            // Otherwise, open a new window
+            if (self.clients.openWindow) {
+                return self.clients.openWindow('/');
+            }
+        })
+    );
+});
