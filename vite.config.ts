@@ -19,6 +19,9 @@ const cleanUrlsPlugin = () => ({
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    port: 5199
+  },
   plugins: [
     react(),
     cleanUrlsPlugin(),

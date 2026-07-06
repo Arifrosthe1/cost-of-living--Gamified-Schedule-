@@ -71,7 +71,7 @@ For an in-depth code review, see [ARCHITECTURE.md](file:///c:/Developer/a%20-%20
 
 ```bash
 cost-of-living/
-├── public/                 # Static assets (PWA icons)
+├── public/                 # Static assets (PWA icons, etc.)
 ├── src/
 │   ├── components/         # Modular React components
 │   │   ├── ActionList.tsx         # Quests & Habits UI + swipe controls + powerups
@@ -90,9 +90,12 @@ cost-of-living/
 │   │   └── migrate.ts             # IndexedDB-to-Firestore bulk sync transaction logic
 │   ├── store/
 │   │   └── db.ts                  # Dexie.js database client setup & schemas
-│   ├── App.tsx             # Application layout structure & router
+│   ├── App.tsx             # Application layout structure & React logic
 │   ├── sw.ts               # Workbox service worker caching & notification listeners
 │   └── main.tsx            # DOM initialization
+├── index.html              # Landing Page entrypoint (served at root /)
+├── app.html                # Main React App entrypoint (served at /app)
+├── vercel.json             # Deployment settings (Clean URLs configuration)
 ```
 
 ---
@@ -131,6 +134,8 @@ cost-of-living/
    ```bash
    npm run dev
    ```
+   - **Landing Page**: served locally at `http://localhost:5199/`
+   - **Web Application**: served locally at `http://localhost:5199/app` (clean URL)
 
 5. Build for production (compiles the PWA):
    ```bash

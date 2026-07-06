@@ -172,7 +172,7 @@ The PWA configuration resides in `vite.config.ts` and uses `vite-plugin-pwa` to 
       event.waitUntil(
           self.registration.showNotification(payload.notification.title, {
               body: payload.notification.body,
-              icon: '/pwa-192x192.png',
+              icon: '/pwa-192x192.svg',
               tag: payload.notification.tag || 'default-push'
           })
       );
