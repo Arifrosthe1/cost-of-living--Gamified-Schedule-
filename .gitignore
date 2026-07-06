@@ -28,4 +28,8 @@ dist-ssr
 
 # AI Agent Skills (local dev tools — not part of the project)
 .agents/
+.codex/
+skills-lock.json
+.github/hooks/
+.github/skills/
 .github/copilot-instructions.md
