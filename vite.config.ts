@@ -3,10 +3,25 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { resolve } from 'path'
 
+const cleanUrlsPlugin = () => ({
+  name: 'clean-urls',
+  configureServer(server: any) {
+    server.middlewares.use((req: any, _res: any, next: any) => {
+      const url = req.url || '';
+      if (url === '/app' || url.startsWith('/app?')) {
+        const query = url.includes('?') ? url.substring(url.indexOf('?')) : '';
+        req.url = '/app.html' + query;
+      }
+      next();
+    });
+  }
+});
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    cleanUrlsPlugin(),
     VitePWA({
       strategies: 'injectManifest',
       srcDir: 'src',
