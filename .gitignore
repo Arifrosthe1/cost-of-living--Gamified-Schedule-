@@ -25,3 +25,7 @@ dist-ssr
 
 .env
 .env.local
+
+# AI Agent Skills (local dev tools — not part of the project)
+.agents/
+.github/copilot-instructions.md
