@@ -91,36 +91,38 @@ function App() {
     <div className="min-h-screen bg-neutral-50 font-sans selection:bg-neutral-200 pb-28 md:pb-12 safe-area-bottom overflow-x-hidden max-w-full">
       {/* App Shell Header */}
       <header className="fixed top-0 left-0 right-0 h-[calc(72px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-white/95 backdrop-blur-xl border-b border-neutral-100 z-40 flex items-center justify-center px-6">
-        <h1 className="text-[11px] font-bold tracking-[0.2em] text-neutral-800 uppercase flex items-center gap-3">
-          Cost <span className="w-1.5 h-1.5 bg-neutral-300 rounded-full"></span> Living
-        </h1>
+        <div className="max-w-md w-full flex items-center justify-between">
+          <h1 className="text-[11px] font-bold tracking-[0.2em] text-neutral-800 uppercase flex items-center gap-3">
+            Cost <span className="w-1.5 h-1.5 bg-neutral-300 rounded-full"></span> Living
+          </h1>
 
-        {/* Streak & Notification Indicator */}
-        <div className="absolute right-6 flex items-center gap-2">
-          {permission !== 'granted' && (
+          {/* Streak & Notification Indicator */}
+          <div className="flex items-center gap-2">
+            {permission !== 'granted' && (
+              <button
+                onClick={requestPermission}
+                className="p-1.5 text-neutral-400 hover:text-neutral-600 bg-neutral-50 hover:bg-neutral-100 rounded-full transition-colors active:scale-95 animate-in fade-in"
+                title="Enable Notifications"
+              >
+                <BellOff size={16} />
+              </button>
+            )}
+
+            {streakCount > 0 && (
+              <div className="flex items-center gap-1 text-orange-500 font-bold text-sm bg-orange-50 px-2 py-1 rounded-full animate-in fade-in slide-in-from-top-2">
+                <Flame size={14} className="fill-orange-500" />
+                <span>{streakCount}</span>
+              </div>
+            )}
+            
             <button
-              onClick={requestPermission}
-              className="p-1.5 text-neutral-400 hover:text-neutral-600 bg-neutral-50 hover:bg-neutral-100 rounded-full transition-colors active:scale-95 animate-in fade-in"
-              title="Enable Notifications"
+              onClick={signOut}
+              className="p-1.5 ml-2 text-neutral-400 hover:text-red-600 bg-neutral-50 hover:bg-red-50 rounded-full transition-colors active:scale-95 animate-in fade-in"
+              title="Sign Out"
             >
-              <BellOff size={16} />
+              <LogOut size={16} />
             </button>
-          )}
-
-          {streakCount > 0 && (
-            <div className="flex items-center gap-1 text-orange-500 font-bold text-sm bg-orange-50 px-2 py-1 rounded-full animate-in fade-in slide-in-from-top-2">
-              <Flame size={14} className="fill-orange-500" />
-              <span>{streakCount}</span>
-            </div>
-          )}
-          
-          <button
-            onClick={signOut}
-            className="p-1.5 ml-2 text-neutral-400 hover:text-red-600 bg-neutral-50 hover:bg-red-50 rounded-full transition-colors active:scale-95 animate-in fade-in"
-            title="Sign Out"
-          >
-            <LogOut size={16} />
-          </button>
+          </div>
         </div>
       </header>
 
