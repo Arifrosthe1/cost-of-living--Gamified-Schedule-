@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { WalletDisplay } from './components/WalletDisplay';
 import { ActionList } from './components/ActionList';
 import { TodoList } from './components/TodoList';
@@ -22,6 +22,55 @@ function App() {
   const [activeTab, setActiveTab] = useState<TabView>('dashboard');
   const [showCreateActionForm, setShowCreateActionForm] = useState(false);
   const [showCreateRewardForm, setShowCreateRewardForm] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [showIOSPrompt, setShowIOSPrompt] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      const dismissed = localStorage.getItem('pwa-prompt-dismissed');
+      if (!dismissed) {
+        setShowInstallPrompt(true);
+      }
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Detect iOS and not standalone
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const dismissedIOS = localStorage.getItem('ios-prompt-dismissed');
+    
+    if (isIOS && !isStandalone && !dismissedIOS) {
+      setShowIOSPrompt(true);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+      setShowInstallPrompt(false);
+    }
+  };
+
+  const dismissPrompt = () => {
+    setShowInstallPrompt(false);
+    localStorage.setItem('pwa-prompt-dismissed', 'true');
+  };
+
+  const dismissIOSPrompt = () => {
+    setShowIOSPrompt(false);
+    localStorage.setItem('ios-prompt-dismissed', 'true');
+  };
   const { isProcessing, balance, streakCount, savingsGoal } = useEconomy();
   const { permission, requestPermission } = useNotifications();
   const { user, loading: authLoading, signOut } = useAuth();
@@ -77,6 +126,53 @@ function App() {
 
       {/* Main Content */}
       <main className="pt-24 pb-12 w-full flex flex-col items-center">
+
+        {/* PWA Install prompts */}
+        {showInstallPrompt && (
+          <div className="w-full max-w-md px-6 mb-4 animate-in slide-in-from-top-2">
+            <div className="bg-neutral-900 text-white rounded-2xl p-4 flex items-center justify-between border border-neutral-800 shadow-lg">
+              <div className="flex flex-col gap-0.5 pr-2">
+                <span className="text-xs font-bold text-left">Install Cost of Living</span>
+                <span className="text-[10px] text-neutral-400 text-left">Add to home screen for offline access and push alerts.</span>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={handleInstallClick}
+                  className="px-3 py-1.5 bg-white text-black text-xs font-bold rounded-xl hover:bg-neutral-200 transition-all active:scale-95"
+                >
+                  Install
+                </button>
+                <button
+                  onClick={dismissPrompt}
+                  className="text-neutral-400 hover:text-white text-xs p-1"
+                  aria-label="Dismiss"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showIOSPrompt && (
+          <div className="w-full max-w-md px-6 mb-4 animate-in slide-in-from-top-2">
+            <div className="bg-neutral-900 text-white rounded-2xl p-4 flex flex-col gap-2 border border-neutral-800 shadow-lg">
+              <div className="flex justify-between items-start">
+                <span className="text-xs font-bold">Install on iPhone / iPad</span>
+                <button
+                  onClick={dismissIOSPrompt}
+                  className="text-neutral-400 hover:text-white text-xs p-1"
+                  aria-label="Dismiss"
+                >
+                  ✕
+                </button>
+              </div>
+              <span className="text-[10px] text-neutral-400 text-left leading-relaxed">
+                Tap the Share button at the bottom of Safari, then select <strong>"Add to Home Screen"</strong> for full offline access.
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Wallet and Progress Bar are persistent across tabs */}
         <div className="w-full transition-all duration-500">
