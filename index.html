@@ -160,6 +160,12 @@
       letter-spacing: 0.01em;
     }
 
+    .btn-sm {
+      padding: 6px 12px;
+      min-height: 34px;
+      font-size: 12px;
+    }
+
     .btn:active {
       transform: scale(0.97);
     }
@@ -185,6 +191,26 @@
     @media (hover: hover) and (pointer: fine) {
       .btn-primary:hover {
         box-shadow: 0 0 20px var(--c-glow), 0 0 0 1px var(--c-overlay-border-hover);
+      }
+    }
+
+    /* ─── Desktop/Mobile Visibility helpers ────────────────────── */
+    .desktop-only {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .mobile-only {
+      display: none;
+    }
+    @media (max-width: 480px) {
+      .desktop-only {
+        display: none;
+      }
+      .mobile-only {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
       }
     }
 
@@ -461,80 +487,196 @@
       max-width: 500px;
     }
 
-    /* ─── Mechanics Grid ───────────────────────────────────────── */
-    .mechanics-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 16px;
+    /* ─── Redesigned Asymmetric Mechanics Layout ────────────────── */
+    .mechanics-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
       margin-top: 56px;
     }
 
-    .mechanic-card {
-      background: var(--c-surface);
-      border: 1px solid var(--c-border);
-      border-radius: var(--rounded-lg);
-      padding: 28px;
-      transition:
-        border-color 200ms var(--ease-out),
-        transform 200ms var(--ease-out),
-        box-shadow 200ms var(--ease-out);
+    .mechanics-row {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 24px;
     }
 
-    @media (hover: hover) and (pointer: fine) {
-      .mechanic-card:hover {
-        border-color: var(--c-border-subtle);
-        transform: translateY(-2px);
+    @media (max-width: 768px) {
+      .mechanics-row {
+        grid-template-columns: 1fr;
       }
     }
 
-    .mechanic-card:active {
-      transform: scale(0.99);
+    .mechanics-column {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: var(--rounded-lg);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      position: relative;
     }
 
-    .mechanic-icon {
-      width: 40px; height: 40px;
+    .flow-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--c-border);
+      padding-bottom: 16px;
+      margin-bottom: 8px;
+    }
+
+    .flow-header h3 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--c-text-muted);
+    }
+
+    .flow-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .flow-dot.green {
+      background: var(--c-green);
+      box-shadow: 0 0 8px var(--c-green);
+    }
+
+    .flow-dot.red {
+      background: var(--c-red);
+      box-shadow: 0 0 8px var(--c-red);
+    }
+
+    .flow-list {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .flow-item {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .flow-icon {
+      width: 40px;
+      height: 40px;
       border-radius: var(--rounded-md);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 18px;
-      margin-bottom: 20px;
+      flex-shrink: 0;
     }
 
-    .mechanic-icon.green { background: var(--c-green-dim); }
-    .mechanic-icon.red   { background: var(--c-red-dim); }
-    .mechanic-icon.amber { background: rgba(245, 158, 11, 0.08); }
+    .flow-icon.green { background: var(--c-green-dim); }
+    .flow-icon.red { background: var(--c-red-dim); }
+    .flow-icon.amber { background: rgba(245, 158, 11, 0.08); }
 
-    .mechanic-title {
+    .flow-content {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-start;
+    }
+
+    .flow-content h4 {
       font-size: 15px;
       font-weight: 700;
       color: var(--c-text);
-      margin-bottom: 8px;
       letter-spacing: -0.01em;
     }
 
-    .mechanic-desc {
+    .flow-content p {
       font-size: 13px;
       color: var(--c-text-muted);
-      line-height: 1.65;
+      line-height: 1.6;
     }
 
-    .mechanic-tag {
+    .flow-badge {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      margin-top: 16px;
       padding: 3px 8px;
       border-radius: 9999px;
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
+      margin-top: 4px;
     }
 
-    .tag-green { background: var(--c-green-dim); color: var(--c-green); }
-    .tag-red   { background: var(--c-red-dim);   color: var(--c-red); }
-    .tag-amber { background: rgba(245, 158, 11, 0.08); color: var(--c-amber); }
+    .flow-badge.green { background: var(--c-green-dim); color: var(--c-green); }
+    .flow-badge.red { background: var(--c-red-dim); color: var(--c-red); }
+    .flow-badge.amber { background: rgba(245, 158, 11, 0.08); color: var(--c-amber); }
+
+    .single-drain {
+      margin-top: auto;
+      margin-bottom: auto;
+    }
+
+    .mechanics-highlights {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .mechanics-highlights {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .highlight-card {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: var(--rounded-lg);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color 200ms var(--ease-out), transform 200ms var(--ease-out);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .highlight-card:hover {
+        border-color: var(--c-border-subtle);
+        transform: translateY(-2px);
+      }
+    }
+
+    .highlight-card:active {
+      transform: scale(0.99);
+    }
+
+    .highlight-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .highlight-card h4 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--c-text);
+      letter-spacing: -0.01em;
+    }
+
+    .highlight-card p {
+      font-size: 13px;
+      color: var(--c-text-muted);
+      line-height: 1.6;
+    }
+
+    .debt-highlight {
+      border: 1px dashed rgba(239, 68, 68, 0.2);
+      background: radial-gradient(circle at 100% 100%, rgba(239, 68, 68, 0.02) 0%, transparent 70%), var(--c-surface);
+    }
 
     /* ─── Economy Rules ────────────────────────────────────────── */
     .rules-wrapper {
@@ -595,7 +737,7 @@
       line-height: 1.6;
     }
 
-    /* ─── Debt calculator card ─────────────────────────────────── */
+    /* ─── Interactive Debt Simulator ───────────────────────────── */
     .debt-card {
       background: var(--c-surface);
       border: 1px solid var(--c-border);
@@ -603,15 +745,133 @@
       padding: 28px;
       position: sticky;
       top: 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .debt-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .debt-card-title {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--c-text-muted);
-      margin-bottom: 20px;
+    }
+
+    .debt-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 4px 8px;
+      border-radius: 9999px;
+      background: rgba(245, 158, 11, 0.08);
+      color: var(--c-amber);
+      transition: background 200ms var(--ease-out), color 200ms var(--ease-out);
+    }
+
+    .debt-badge.status-safe {
+      background: var(--c-green-dim);
+      color: var(--c-green);
+    }
+
+    .debt-badge.status-danger {
+      background: var(--c-red-dim);
+      color: var(--c-red);
+    }
+
+    .debt-badge.status-bankruptcy {
+      background: var(--c-red-dim);
+      color: var(--c-red);
+      animation: flash 1s var(--ease-out) infinite;
+    }
+
+    @keyframes flash {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .simulator-balance-box {
+      background: var(--c-surface-2);
+      border: 1px solid var(--c-border);
+      border-radius: var(--rounded-md);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .sim-label {
+      font-size: 10px;
+      color: var(--c-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .sim-value {
+      font-size: 28px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      transition: color 200ms var(--ease-out);
+    }
+
+    .sim-value.neg {
+      color: var(--c-red);
+    }
+
+    .sim-value.pos {
+      color: var(--c-green);
+    }
+
+    .simulator-slider-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 8px 0;
+    }
+
+    .slider-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--c-text-muted);
+    }
+
+    .sim-slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--c-border);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .sim-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--c-text);
+      cursor: pointer;
+      border: 1px solid var(--c-border);
+      transition: transform 100ms var(--ease-out), background 100ms var(--ease-out);
+    }
+
+    .sim-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      background: var(--c-red);
+    }
+
+    .sim-slider::-webkit-slider-thumb:active {
+      transform: scale(0.95);
     }
 
     .debt-row {
@@ -628,16 +888,29 @@
     .debt-row-value.neg { color: var(--c-red); }
     .debt-row-value.pos { color: var(--c-green); }
     .debt-row-value.warn { color: var(--c-amber); }
+    .text-dim { color: var(--c-text-dim); }
 
     .debt-note {
-      margin-top: 16px;
       padding: 12px;
-      background: var(--c-red-dim);
-      border: 1px solid rgba(239, 68, 68, 0.15);
       border-radius: var(--rounded-sm);
       font-size: 12px;
-      color: var(--c-red);
       line-height: 1.5;
+      background: var(--c-red-dim);
+      border: 1px solid rgba(239, 68, 68, 0.15);
+      color: var(--c-red);
+      transition: background 200ms var(--ease-out), border-color 200ms var(--ease-out), color 200ms var(--ease-out);
+    }
+
+    .debt-note.warning {
+      background: rgba(245, 158, 11, 0.08);
+      border-color: rgba(245, 158, 11, 0.15);
+      color: var(--c-amber);
+    }
+
+    .debt-note.safe {
+      background: var(--c-green-dim);
+      border-color: rgba(34, 197, 94, 0.15);
+      color: var(--c-green);
     }
 
     /* ─── Stack section ────────────────────────────────────────── */
@@ -787,8 +1060,11 @@
     Cost · Living
   </a>
   <div class="nav-cta">
-    <a href="https://github.com/Arifrosthe1/cost-of-living--Gamified-Schedule-" class="btn btn-ghost" target="_blank" rel="noopener">GitHub</a>
-    <a href="/app" class="btn btn-primary" rel="noopener">Launch App →</a>
+    <a href="https://github.com/Arifrosthe1/cost-of-living--Gamified-Schedule-" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">GitHub</a>
+    <a href="/app" class="btn btn-primary btn-sm" rel="noopener">
+      <span class="desktop-only">Launch App →</span>
+      <span class="mobile-only">Launch →</span>
+    </a>
   </div>
 </nav>
 
@@ -799,7 +1075,7 @@
 
   <div class="hero-badge">
     <span class="hero-badge-dot"></span>
-    Live at costofliving.arifros.com
+    Installable PWA • Download to Home Screen
   </div>
 
   <h1 class="hero-headline">
@@ -861,47 +1137,87 @@
 <!-- MECHANICS -->
 <section id="mechanics">
   <div class="reveal">
-    <div class="section-label">How it works</div>
     <h2 class="section-title">A real economy<br />for your life</h2>
     <p class="section-desc">Built on brutal incentives. Every decision has a price tag.</p>
   </div>
 
-  <div class="mechanics-grid">
-    <div class="mechanic-card reveal" style="transition-delay: 0.05s">
-      <div class="mechanic-icon green">⚔️</div>
-      <div class="mechanic-title">Quests & Habits</div>
-      <div class="mechanic-desc">Main Quests for core habits. Side Quests for quick wins. Each completion credits your balance instantly. A 3-day streak triggers a 1.2× earning multiplier.</div>
-      <span class="mechanic-tag tag-green">+RM per action</span>
+  <div class="mechanics-flow">
+    <!-- Row 1: The Core Engine (Asymmetric Split) -->
+    <div class="mechanics-row">
+      <div class="mechanics-column earn-side reveal" style="transition-delay: 0.05s">
+        <div class="flow-header">
+          <span class="flow-dot green"></span>
+          <h3>The Earnings</h3>
+        </div>
+        <div class="flow-list">
+          <div class="flow-item">
+            <div class="flow-icon green">⚔️</div>
+            <div class="flow-content">
+              <h4>Quests & Habits</h4>
+              <p>Core habits and side wins. Every completion credits your balance. Streaks trigger multipliers.</p>
+              <span class="flow-badge green">+RM per completion</span>
+            </div>
+          </div>
+          <div class="flow-item">
+            <div class="flow-icon green">📋</div>
+            <div class="flow-content">
+              <h4>Daily Contracts</h4>
+              <p>Commit to daily tasks. Complete them to earn; fail and forfeit RM15 automatically at midnight.</p>
+              <span class="flow-badge green">±RM 15 / contract</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mechanics-column drain-side reveal" style="transition-delay: 0.1s">
+        <div class="flow-header">
+          <span class="flow-dot red"></span>
+          <h3>The Drain</h3>
+        </div>
+        <div class="flow-list single-drain">
+          <div class="flow-item">
+            <div class="flow-icon red">💸</div>
+            <div class="flow-content">
+              <h4>Daily Tax</h4>
+              <p>RM5 is auto-deducted every single day. No weekends or sick days. The tax is the engine of urgency — you cannot coast.</p>
+              <span class="flow-badge red">−RM 5 / daily</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="mechanic-card reveal" style="transition-delay: 0.10s">
-      <div class="mechanic-icon green">📋</div>
-      <div class="mechanic-title">Daily Contracts</div>
-      <div class="mechanic-desc">Commit to a task for today or tomorrow. Complete it for +RM15. Let the day pass without completing it and lose −RM15 automatically.</div>
-      <span class="mechanic-tag tag-green">±RM 15 per contract</span>
-    </div>
-    <div class="mechanic-card reveal" style="transition-delay: 0.15s">
-      <div class="mechanic-icon red">💸</div>
-      <div class="mechanic-title">Daily Tax</div>
-      <div class="mechanic-desc">RM5 is deducted every single day. No exceptions. You cannot coast — you must earn just to break even. The tax is the engine of urgency.</div>
-      <span class="mechanic-tag tag-red">−RM 5 / day</span>
-    </div>
-    <div class="mechanic-card reveal" style="transition-delay: 0.20s">
-      <div class="mechanic-icon red">📉</div>
-      <div class="mechanic-title">Compounding Debt</div>
-      <div class="mechanic-desc">Fall below RM0 and your debt compounds at 25% per day. A small negative balance becomes a catastrophic one within a week. Consistency is survival.</div>
-      <span class="mechanic-tag tag-red">25% daily interest</span>
-    </div>
-    <div class="mechanic-card reveal" style="transition-delay: 0.25s">
-      <div class="mechanic-icon amber">🎲</div>
-      <div class="mechanic-title">Destiny Doubler</div>
-      <div class="mechanic-desc">Roll the dice every 2 hours. A random Side Quest gets highlighted. Complete it within 15 minutes and its reward is doubled. Miss the window and the boost vanishes.</div>
-      <span class="mechanic-tag tag-amber">2× reward window</span>
-    </div>
-    <div class="mechanic-card reveal" style="transition-delay: 0.30s">
-      <div class="mechanic-icon amber">📦</div>
-      <div class="mechanic-title">Mystery Box Gacha</div>
-      <div class="mechanic-desc">Spend RM99 to open a box. Win a common reward or a temporary powerup: Double Trouble (2× next 3 habits), Bounty Hunter (+RM50 on next Side Quest), or Main Quest Overdrive.</div>
-      <span class="mechanic-tag tag-amber">RM 99 to open</span>
+
+    <!-- Row 2: The Multipliers & Hazards (Asymmetric Grid) -->
+    <div class="mechanics-highlights">
+      <!-- Debt Card (Double Width / Heavy visual) -->
+      <div class="highlight-card debt-highlight reveal" style="transition-delay: 0.15s">
+        <div class="highlight-header">
+          <div class="flow-icon red">📉</div>
+          <span class="flow-badge red">25% Daily Interest</span>
+        </div>
+        <h4>Compounding Debt</h4>
+        <p>Falling below RM0 triggers 25% daily compounding interest. A small slip grows catastrophically, forcing extreme discipline to survive bankruptcy.</p>
+      </div>
+
+      <!-- Destiny Card -->
+      <div class="highlight-card reveal" style="transition-delay: 0.2s">
+        <div class="highlight-header">
+          <div class="flow-icon amber">🎲</div>
+          <span class="flow-badge amber">2× Multiplier</span>
+        </div>
+        <h4>Destiny Doubler</h4>
+        <p>Roll every 2 hours to highlight a random Side Quest. Complete it within 15 minutes for double rewards.</p>
+      </div>
+
+      <!-- Gacha Card -->
+      <div class="highlight-card reveal" style="transition-delay: 0.25s">
+        <div class="highlight-header">
+          <div class="flow-icon amber">📦</div>
+          <span class="flow-badge amber">RM 99 Cost</span>
+        </div>
+        <h4>Mystery Box Gacha</h4>
+        <p>Spend RM99 to open a box. Win common rewards or temporary powerups like Double Trouble and Bounty Hunter.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -909,7 +1225,6 @@
 <!-- ECONOMY RULES -->
 <section id="rules">
   <div class="reveal">
-    <div class="section-label">The math</div>
     <h2 class="section-title">Brutal by design</h2>
     <p class="section-desc">The rules are simple. The consequences are not.</p>
   </div>
@@ -946,34 +1261,43 @@
       </div>
     </div>
 
-    <div class="debt-card reveal" style="transition-delay: 0.1s">
-      <div class="debt-card-title">Debt Simulation — 5 Lazy Days</div>
-      <div class="debt-row">
-        <span class="debt-row-label">Start (Day 0)</span>
-        <span class="debt-row-value neg">−RM 20.00</span>
+    <!-- Interactive Debt Simulator -->
+    <div class="debt-card reveal" style="transition-delay: 0.1s" id="interactive-debt-simulator">
+      <div class="debt-card-header">
+        <div class="debt-card-title">Debt Simulator</div>
+        <span class="debt-badge status-danger" id="simulator-status-badge">Compounding</span>
       </div>
-      <div class="debt-row">
-        <span class="debt-row-label">Day 1 (tax + 25% interest)</span>
-        <span class="debt-row-value neg">−RM 30.00</span>
+      
+      <div class="simulator-balance-box">
+        <span class="sim-label">Projected Balance</span>
+        <div class="sim-value neg" id="sim-projected-balance">−RM 30.00</div>
       </div>
-      <div class="debt-row">
-        <span class="debt-row-label">Day 2</span>
-        <span class="debt-row-value neg">−RM 42.50</span>
+
+      <div class="simulator-slider-wrapper">
+        <div class="slider-labels">
+          <span>Days Inactive: <strong id="sim-days-label">1</strong></span>
+          <span id="sim-interest-label">+25% / day</span>
+        </div>
+        <input type="range" min="0" max="10" value="1" class="sim-slider" id="sim-days-slider" />
       </div>
-      <div class="debt-row">
-        <span class="debt-row-label">Day 3</span>
-        <span class="debt-row-value neg">−RM 58.13</span>
+
+      <div class="debt-rows-dynamic">
+        <div class="debt-row">
+          <span class="debt-row-label">Initial Balance</span>
+          <span class="debt-row-value text-dim">−RM 20.00</span>
+        </div>
+        <div class="debt-row">
+          <span class="debt-row-label">Accrued Tax (−RM5/day)</span>
+          <span class="debt-row-value" id="sim-accrued-tax">−RM 5.00</span>
+        </div>
+        <div class="debt-row">
+          <span class="debt-row-label">Accrued Interest (25%)</span>
+          <span class="debt-row-value" id="sim-accrued-interest">−RM 5.00</span>
+        </div>
       </div>
-      <div class="debt-row">
-        <span class="debt-row-label">Day 4</span>
-        <span class="debt-row-value neg">−RM 77.66</span>
-      </div>
-      <div class="debt-row">
-        <span class="debt-row-label">Day 5</span>
-        <span class="debt-row-value neg">−RM 102.07</span>
-      </div>
-      <div class="debt-note">
-        ⚠️ Five days of doing nothing turns a RM20 dip into over RM100 of debt. The math is intentionally unforgiving.
+
+      <div class="debt-note warning" id="sim-note">
+        ⚠️ A single day of inactivity increases your debt. Compounding interest makes it harder to recover.
       </div>
     </div>
   </div>
@@ -982,7 +1306,6 @@
 <!-- TECH STACK -->
 <section id="stack">
   <div class="reveal">
-    <div class="section-label">Built with</div>
     <h2 class="section-title">Production-grade PWA</h2>
     <p class="section-desc">Mobile-first, offline-first. Installs like a native app. Works on the ferry without data.</p>
   </div>
@@ -1051,7 +1374,7 @@
 <div class="cta-section">
   <div class="cta-inner reveal">
     <h2 class="cta-title">Can you stay<br />out of debt?</h2>
-    <p class="cta-sub">Free. No accounts required to browse. Install it on your phone and see how long your discipline holds.</p>
+    <p class="cta-sub">Free. No accounts required. Launch the app on your phone and install it directly via your browser menu for full offline access.</p>
     <a href="/app" class="btn btn-primary cta-btn" rel="noopener">
       Launch Cost of Living →
     </a>
@@ -1121,6 +1444,77 @@ const widgetObserver = new IntersectionObserver(
 
 const widget = document.querySelector('.hero-widget');
 if (widget) widgetObserver.observe(widget);
+
+// ─── Compounding Debt Simulator ─────────────────────────────────────────────
+const daysSlider = document.getElementById('sim-days-slider');
+const daysLabel = document.getElementById('sim-days-label');
+const projectedBalanceEl = document.getElementById('sim-projected-balance');
+const accruedTaxEl = document.getElementById('sim-accrued-tax');
+const accruedInterestEl = document.getElementById('sim-accrued-interest');
+const simNoteEl = document.getElementById('sim-note');
+const statusBadgeEl = document.getElementById('simulator-status-badge');
+
+function calculateDebt(days) {
+  let balance = -20;
+  let totalTax = 0;
+  let totalInterest = 0;
+  for (let i = 1; i <= days; i++) {
+    const dailyInterest = balance * 0.25;
+    totalInterest += dailyInterest;
+    balance += dailyInterest - 5;
+    totalTax += 5;
+  }
+  return {
+    balance: balance,
+    tax: totalTax,
+    interest: totalInterest
+  };
+}
+
+function formatRM(val) {
+  const absVal = Math.abs(val).toFixed(2);
+  return `${val < 0 ? '−' : ''}RM ${absVal}`;
+}
+
+function updateDebtSimulator() {
+  if (!daysSlider) return;
+  const days = parseInt(daysSlider.value, 10);
+  daysLabel.textContent = days;
+
+  const results = calculateDebt(days);
+  projectedBalanceEl.textContent = formatRM(results.balance);
+  accruedTaxEl.textContent = formatRM(-results.tax);
+  accruedInterestEl.textContent = formatRM(results.interest);
+
+  // Status and Notes
+  statusBadgeEl.className = 'debt-badge'; // Reset classes
+  
+  if (days === 0) {
+    statusBadgeEl.textContent = 'Safe';
+    statusBadgeEl.classList.add('status-safe');
+    simNoteEl.className = 'debt-note safe';
+    simNoteEl.textContent = '✅ No inactivity yet. Zero debt accumulated.';
+  } else if (days <= 3) {
+    statusBadgeEl.textContent = 'Compounding';
+    simNoteEl.className = 'debt-note warning';
+    simNoteEl.textContent = '⚠️ Debt is compounding. Your daily cost of living increases.';
+  } else if (results.balance > -299) {
+    statusBadgeEl.textContent = 'Danger';
+    statusBadgeEl.classList.add('status-danger');
+    simNoteEl.className = 'debt-note';
+    simNoteEl.textContent = '🚨 High risk. Compounding interest has more than doubled your starting debt.';
+  } else {
+    statusBadgeEl.textContent = 'Bankruptcy Imminent';
+    statusBadgeEl.classList.add('status-bankruptcy');
+    simNoteEl.className = 'debt-note';
+    simNoteEl.textContent = '💀 Bankruptcy threshold reached (−RM299). If you do not execute, your whole account will be forced to wipe.';
+  }
+}
+
+if (daysSlider) {
+  daysSlider.addEventListener('input', updateDebtSimulator);
+  updateDebtSimulator(); // Initial run
+}
 </script>
 
 </body>

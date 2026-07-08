@@ -17,6 +17,18 @@ const cleanUrlsPlugin = () => ({
   }
 });
 
+const removePwaFromIndexPlugin = () => ({
+  name: 'remove-pwa-from-index',
+  transformIndexHtml(html: string, ctx: any) {
+    if (ctx.path === '/index.html' || ctx.filename.endsWith('index.html')) {
+      return html
+        .replace(/<link rel="manifest" [^>]*>/g, '')
+        .replace(/<script[^>]*id="vite-plugin-pwa:[^"]*"[^>]*>.*?<\/script>/gs, '');
+    }
+    return html;
+  }
+});
+
 // https://vite.dev/config/
 export default defineConfig({
   server: {
@@ -25,6 +37,7 @@ export default defineConfig({
   plugins: [
     react(),
     cleanUrlsPlugin(),
+    removePwaFromIndexPlugin(),
     VitePWA({
       strategies: 'injectManifest',
       srcDir: 'src',
@@ -35,6 +48,8 @@ export default defineConfig({
         short_name: 'Cost of Living',
         description: 'Gamified daily schedule and habit tracking PWA',
         theme_color: '#ffffff',
+        start_url: '/app',
+        scope: '/',
         icons: [
           {
             src: 'pwa-192x192.svg',
